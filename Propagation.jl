@@ -19,6 +19,7 @@ function propagate_SI!(og::ObsGraph, beta, t_max::Int=10^11)::LocData
     obs_dict = Dict()
 
     source = Random.rand(1:N)
+    empty!(og.infected_set)
     push!(og.infected_set, source)
     if source in og.observer_set
         obs_dict[source] = t_start
