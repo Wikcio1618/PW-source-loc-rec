@@ -61,27 +61,43 @@ Following Holyst '18
 """
 function GMLA_loc(og::ObsGraph, obs_data::Dict{Int,Int}, beta, K0=missing)::Int
     if ismissing(K0)
-        K0 = sqrt(nv(og.graph))
+        K0 = round(Int, sqrt(nv(og.graph)))
+        if K0 > length(obs_data)
+            K0 = length(obs_data)
+        end
     end
     if K0 < 2
         throw(ArgumentError("At least two observers are required."))
     end
 
-    pairs = sort(collect(zip(keys, values)), by=x -> x[2])
+    pairs = sort(collect(zip(keys(obs_data), values(obs_data))), by=x -> x[2])
     observers = [p[1] for p in pairs][1:K0]
     times = [p[2] for p in pairs][1:K0]
+    println(times)
+    println(observers)
 
     t_prim = [times[i+1] - times[1] for i in 1:K0-1]
-    
 
     best_source = observers[1]
     best_score = calculate_phi_score(og.graph, observers[1], t_prim, observers, beta)
     S = Set(observers[1])
-    
+
     while true
-        T_v = []
-        for nei ∈ neighbors(og.graph, best_source)
-            
+        println("Considering $best_source")
+        T_v = Dict(nei => calculate_phi_score(og.graph, nei, t_prim, observers, beta) for nei ∈ neighbors(og.graph, best_source) if nei ∉ S)
+
+        if isempty(T_v)
+            break
+        end
+        union!(S, collect(keys(T_v)))
+
+        curr_best_source = argmax(T_v)
+        curr_best_score = T_v[curr_best_source]
+        if curr_best_score < best_score
+            break
+        else
+            best_score = curr_best_score
+            best_source = curr_best_source
         end
     end
 
@@ -92,7 +108,6 @@ end
 From Machura '22
 """
 function calculate_phi_score(g::SimpleGraph, s::Int, t_prim::Vector{Int}, observers::Vector{Int}, beta)::Float64
-
     tree = SimpleGraph(Graphs.bfs_tree(g, s))
     K = length(observers)
     mu = 1 / beta
