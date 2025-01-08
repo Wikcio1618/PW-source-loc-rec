@@ -45,7 +45,7 @@ function LPTVA_loc(og::ObsGraph, obs_data::Dict{Int,Int}, beta)
 
     # Iterate over each node in the graph as a candidate source
     for s in vertices(og.graph)
-        F_s = calculate_phi_score(og, s, t_prim, observers, beta)
+        F_s = calculate_phi_score(og.graph, s, t_prim, observers, beta)
         if F_s > best_score
             best_score = F_s
             best_source = s
@@ -73,8 +73,6 @@ function GMLA_loc(og::ObsGraph, obs_data::Dict{Int,Int}, beta, K0=missing)::Int
     pairs = sort(collect(zip(keys(obs_data), values(obs_data))), by=x -> x[2])
     observers = [p[1] for p in pairs][1:K0]
     times = [p[2] for p in pairs][1:K0]
-    println(times)
-    println(observers)
 
     t_prim = [times[i+1] - times[1] for i in 1:K0-1]
 
