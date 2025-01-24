@@ -1,5 +1,5 @@
 module Localization
-export pearson_loc, LPTVA_loc, GMLA_loc
+export pearson_loc, LPTVA_loc, GMLA_loc, paths_from_node, dfs_rec
 
 using ..ObserverGraph
 using ..Propagation
@@ -133,6 +133,26 @@ function calculate_phi_score(g::SimpleGraph, s::Int, t_prim::Vector{Int}, observ
     temp_vec = t_prim - mu_s
     phi = -(transpose(temp_vec) * L_s_inv * temp_vec) - log(det_L)
     return phi
+end
+
+"""
+Given node `s` and graph `g` return dictionary mapping index of each node in the graph to the vector of indexes defining a path from `s` to the key 
+"""
+function paths_from_node(g::SimpleGraph, s::Int)::Dict{Int,Vector{Int}}
+    result = Dict(idx => Vector{Int}() for idx in 1:nv(g))
+    dfs_rec(g, Set{Int}(), result, s, Vector{Int}())
+    return result
+end
+
+function dfs_rec(g::SimpleGraph, visited_set::Set{Int}, result::Dict{Int,Vector{Int}}, curr_node::Int, track::Vector{Int})
+    push!(visited_set, curr_node)
+    result[curr_node] = track
+    for nei ∈ neighbors(g, curr_node)
+        if nei ∉ visited_set
+            # [track...; curr_node] === track with appended current 
+            dfs_rec(g, visited_set, result, nei, [track...; curr_node])
+        end
+    end
 end
 
 end
