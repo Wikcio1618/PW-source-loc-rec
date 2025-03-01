@@ -1,24 +1,20 @@
-module Propagation
-export LocData, propagate_SI!
-
-using ..ObserverGraph
+include("StructModule.jl")
+using .StructModule
 
 using Graphs
 using Random
-    
-struct LocData
-    obs_data::Dict{Int, Int}
-    source::Int
-    t_start::Int
-end
 
-function propagate_SI!(og::ObsGraph, beta, t_max::Int=10^11)::LocData
-    @assert 0.0 <= beta <= 1.0
-    N::Int = nv(og.graph)
+function propagate_SI!(og::ObsGraph, r::Float64, beta::Float64, t_max::Int=10^11)::LocData
+    @assert 0.0 < beta < 1.0
+    @assert 0.0 < r <= 1.0
+    V::Int = nv(og.graph)
     t_start::Int = Random.rand(1:100) # arbitrary large number for possible start
-    obs_dict = Dict()
+    obs_dict = Dict{Int, Int}()
 
-    source = Random.rand(1:N)
+    empty!(og.observer_set)
+    push!(og.observer_set, Random.randperm(V)[1:round(Int, r * V)]...)
+
+    source = Random.rand(1:V)
     empty!(og.infected_set)
     push!(og.infected_set, source)
     if source in og.observer_set
@@ -26,7 +22,7 @@ function propagate_SI!(og::ObsGraph, beta, t_max::Int=10^11)::LocData
     end
 
     t::Int = t_start+1
-    while (length(og.infected_set) < N)
+    while (length(og.infected_set) < V)
         temp_set = Set()
         for i in og.infected_set
             for nei in Graphs.neighbors(og.graph, i)
@@ -51,5 +47,4 @@ function propagate_SI!(og::ObsGraph, beta, t_max::Int=10^11)::LocData
     end
 
     return LocData(obs_dict, source, t_start)
-end
 end
