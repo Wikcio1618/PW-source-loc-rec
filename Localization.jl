@@ -8,8 +8,8 @@ using LinearAlgebra
 
 # Each and everyone of 3 localization methods returns pairs of (node_idx, score) [Vector{Tuple{Int64, Float64}}] sorted by score
 
-function pearson_loc(og::ObsGraph, obs_data::Dict{Int,Int})::Vector{Tuple{Int64,Float64}}
-    V = nv(og.graph)
+function pearson_loc(g::SimpleGraph, obs_data::Dict{Int,Int})::Vector{Tuple{Int64,Float64}}
+    V = nv(g)
     O = length(obs_data)
     obs_idxs = collect(keys(obs_data))
     obs_times = collect(values(obs_data))
@@ -19,7 +19,7 @@ function pearson_loc(og::ObsGraph, obs_data::Dict{Int,Int})::Vector{Tuple{Int64,
     # for every observer
     for (i, obs_idx) in enumerate(obs_idxs)
         # TODO: use paths_from_node algortithm for speedup?
-        LENS[i, :] = dijkstra_shortest_paths(og.graph, obs_idx).dists
+        LENS[i, :] = dijkstra_shortest_paths(g, obs_idx).dists
     end
     # for every node
     covs = Dict{Int,Float64}(s => Statistics.cor(LENS[:, s], obs_times) for s in 1:V)
@@ -29,7 +29,7 @@ function pearson_loc(og::ObsGraph, obs_data::Dict{Int,Int})::Vector{Tuple{Int64,
 end
 
 
-function LPTVA_loc(og::ObsGraph, obs_data::Dict{Int,Int}, beta)::Vector{Tuple{Int64,Float64}}
+function LPTVA_loc(g::SimpleGraph, obs_data::Dict{Int,Int}, beta)::Vector{Tuple{Int64,Float64}}
     pairs = sort(collect(zip(keys(obs_data), values(obs_data))), by=x -> x[2])
     observers = [p[1] for p in pairs]
     times = [p[2] for p in pairs]
@@ -41,7 +41,7 @@ function LPTVA_loc(og::ObsGraph, obs_data::Dict{Int,Int}, beta)::Vector{Tuple{In
 
     t_prim = [times[i+1] - times[1] for i in 1:K-1]
 
-    scores = Dict{Int,Float64}(s => calculate_phi_score(og.graph, s, t_prim, observers, beta) for s in vertices(og.graph))
+    scores = Dict{Int,Float64}(s => calculate_phi_score(g, s, t_prim, observers, beta) for s in vertices(g))
     pairs = sort(collect(zip(keys(scores), values(scores))), by=x -> x[2], rev=true)
 
     return pairs
@@ -51,9 +51,9 @@ end
 """
 Following Holyst '18
 """
-function GMLA_loc(og::ObsGraph, obs_data::Dict{Int,Int}, beta, K0=missing)::Vector{Tuple{Int64,Float64}}
+function GMLA_loc(g::SimpleGraph, obs_data::Dict{Int,Int}, beta, K0=missing)::Vector{Tuple{Int64,Float64}}
     if ismissing(K0)
-        K0 = round(Int, sqrt(nv(og.graph)))
+        K0 = round(Int, sqrt(nv(g)))
         if K0 > length(obs_data)
             K0 = length(obs_data)
         end
@@ -73,9 +73,9 @@ function GMLA_loc(og::ObsGraph, obs_data::Dict{Int,Int}, beta, K0=missing)::Vect
     while true
         Tv_max = -Inf
         nei_max = 0
-        for nei ∈ neighbors(og.graph, curr_node)
+        for nei ∈ neighbors(g, curr_node)
             if !haskey(scores, nei)
-                score = calculate_phi_score(og.graph, nei, t_prim, observers, beta)
+                score = calculate_phi_score(g, nei, t_prim, observers, beta)
                 if score > Tv_max
                     Tv_max = score
                     nei_max = nei

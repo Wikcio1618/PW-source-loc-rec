@@ -2,4 +2,5 @@ try.ipynb
 lab.ipynb
 *.ipynb
 data
+networks
 main.jl

@@ -4,21 +4,20 @@ using .StructModule
 using Graphs
 using Random
 
-function propagate_SI!(og::ObsGraph, r::Float64, beta::Float64, t_max::Int=10^11)::LocData
+function propagate_SI!(g::SimpleGraph, r::Float64, beta::Float64, t_max::Int=10^11)::LocData
     @assert 0.0 < beta < 1.0
     @assert 0.0 < r <= 1.0
-    V::Int = nv(og.graph)
+    V::Int = nv(g)
     t_start::Int = Random.rand(1:100) # arbitrary large number for possible start
     obs_dict = Dict{Int, Int}()
-
-    empty!(og.observer_set)
-    push!(og.observer_set, Random.randperm(V)[1:round(Int, r * V)]...)
+    
+    observer_set = Set(Random.randperm(V)[1:round(Int, r * V)])
 
     source = Random.rand(1:V)
 
     infected_set = Set{Int}(source)
 
-    if source in og.observer_set
+    if source in observer_set
         obs_dict[source] = t_start
     end
 
@@ -26,12 +25,11 @@ function propagate_SI!(og::ObsGraph, r::Float64, beta::Float64, t_max::Int=10^11
     while (length(infected_set) < V)
         temp_set = Set()
         for i in infected_set
-            for nei in Graphs.neighbors(og.graph, i)
+            for nei in Graphs.neighbors(g, i)
                 if (!(nei in infected_set) && Random.rand() < beta) # infection probability AND not already infected 
-                    # infect node
                     push!(temp_set, nei)
                     # add observer data (observer_idx, timestamp)
-                    if nei in og.observer_set
+                    if nei in observer_set
                         obs_dict[nei] = t
                     end
                 end

@@ -5,8 +5,8 @@ include("StructModule.jl")
 import .StructModule: LocData
 
 graph_type_dict = Dict(
-    :ba => make_BA_obs_graph,
-    :er => make_ER_obs_graph
+    :ba => make_BA_graph,
+    :er => make_ER_graph
 )
 
 method_type_dict = Dict(
@@ -20,10 +20,10 @@ function precision_to_file(
     graph_type::Symbol,
     loc_type::Symbol,
     beta::Float64,
+    r::Float64,
     N::Int,
     graph_args::Dict
 )
-    r = graph_args[:r]
     open(path, "w") do io
         println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta,graph_args=$graph_args")
         println(io, "rank,precision")

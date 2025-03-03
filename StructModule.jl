@@ -9,8 +9,4 @@ struct LocData
     t_start::Int
 end
 
-struct ObsGraph
-    graph::Graph
-    observer_set::Set
-end
 end
