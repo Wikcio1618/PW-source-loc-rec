@@ -15,18 +15,19 @@ function propagate_SI!(og::ObsGraph, r::Float64, beta::Float64, t_max::Int=10^11
     push!(og.observer_set, Random.randperm(V)[1:round(Int, r * V)]...)
 
     source = Random.rand(1:V)
-    empty!(og.infected_set)
-    push!(og.infected_set, source)
+
+    infected_set = Set{Int}(source)
+
     if source in og.observer_set
         obs_dict[source] = t_start
     end
 
     t::Int = t_start+1
-    while (length(og.infected_set) < V)
+    while (length(infected_set) < V)
         temp_set = Set()
-        for i in og.infected_set
+        for i in infected_set
             for nei in Graphs.neighbors(og.graph, i)
-                if (!(nei in og.infected_set) && Random.rand() < beta) # infection probability AND not already infected 
+                if (!(nei in infected_set) && Random.rand() < beta) # infection probability AND not already infected 
                     # infect node
                     push!(temp_set, nei)
                     # add observer data (observer_idx, timestamp)
@@ -37,7 +38,7 @@ function propagate_SI!(og::ObsGraph, r::Float64, beta::Float64, t_max::Int=10^11
             end
         end
         for i in temp_set
-            push!(og.infected_set, i)
+            push!(infected_set, i)
         end
 
         t += 1

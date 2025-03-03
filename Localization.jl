@@ -68,15 +68,13 @@ function GMLA_loc(og::ObsGraph, obs_data::Dict{Int,Int}, beta, K0=missing)::Vect
     t_prim = [times[i+1] - times[1] for i in 1:K0-1]
 
     curr_node = observers[1]
-    max_score = 0
+    max_score = -Inf
     scores = Dict{Int,Float64}()
     while true
         Tv_max = -Inf
         nei_max = 0
-        new_neighbor = false
         for nei ∈ neighbors(og.graph, curr_node)
             if !haskey(scores, nei)
-                new_neighbor = true
                 score = calculate_phi_score(og.graph, nei, t_prim, observers, beta)
                 if score > Tv_max
                     Tv_max = score
@@ -86,7 +84,7 @@ function GMLA_loc(og::ObsGraph, obs_data::Dict{Int,Int}, beta, K0=missing)::Vect
             end
         end
 
-        if !new_neighbor || Tv_max < max_score
+        if Tv_max < max_score
             break
         else
             max_score = Tv_max
@@ -163,22 +161,4 @@ function path_rec(tree::SimpleGraph, target::Int, visited::Set{Int}, curr_path::
             path_rec(tree, target, visited, [curr_path; nei], paths)
         end
     end
-end
-
-function paths_from_node(par::Vector{Int}, s::Int, targets::Vector{Int})::Dict{Int,Vector{Int}}
-    result = Dict(tgt => Int[] for tgt in targets)  # Use Vector instead of Set to preserve order
-    for tgt in targets
-        curr = tgt
-        path = Int[]
-        while curr != s
-            pushfirst!(path, curr)  # Prepend to maintain path order
-            if curr == par[curr]  # Detect self-loop or broken ancestry
-                error("Infinite loop detected: Node $curr cannot reach $s")
-            end
-            curr = par[curr]
-        end
-        pushfirst!(path, s)  # Ensure s is included 
-        result[tgt] = path
-    end
-    return result
 end

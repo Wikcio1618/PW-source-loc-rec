@@ -12,6 +12,5 @@ end
 struct ObsGraph
     graph::Graph
     observer_set::Set
-    infected_set::Set
 end
 end
