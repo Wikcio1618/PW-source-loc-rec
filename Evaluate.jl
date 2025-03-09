@@ -1,6 +1,6 @@
 include("Localization.jl")
 include("Propagation.jl")
-include("ObserverGraph.jl")
+include("GraphMaking.jl")
 include("StructModule.jl")
 import .StructModule: LocData
 
@@ -31,7 +31,6 @@ function precision_to_file(
             og = graph_type_dict[graph_type](;graph_args...)
             for _ in 1:10
                 loc_data::LocData = propagate_SI!(og, r, beta)
-                # loc_result::Vector{Tuple{Int,Float64}}
                 if loc_type == :pearson
                     loc_result = method_type_dict[loc_type](og, loc_data.obs_data)
                 else
