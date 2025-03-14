@@ -65,8 +65,6 @@ function fluctuation_modify(new_g::SimpleGraph, dj::Float64, graph_type::Symbol,
         thetas = nlsolve(theta -> theta_equations!(theta, theta, ki_mean), theta_init).zero
     end
 
-    
-
     return new_g
 end
 

@@ -4,9 +4,10 @@ using .StructModule
 using Graphs
 using Statistics
 using LinearAlgebra
+using Base.Threads
 
 
-# Each and everyone of 3 localization methods returns pairs of (node_idx, score) [Vector{Tuple{Int64, Float64}}] sorted by score
+# Each and every one of 3 localization methods returns pairs of (node_idx, score) sorted by score
 
 function pearson_loc(g::SimpleGraph, obs_data::Dict{Int,Int})::Vector{Tuple{Int64,Float64}}
     V = nv(g)
@@ -41,10 +42,16 @@ function LPTVA_loc(g::SimpleGraph, obs_data::Dict{Int,Int}, beta)::Vector{Tuple{
 
     t_prim = [times[i+1] - times[1] for i in 1:K-1]
 
-    scores = Dict{Int,Float64}(s => calculate_phi_score(g, s, t_prim, observers, beta) for s in vertices(g))
-    pairs = sort(collect(zip(keys(scores), values(scores))), by=x -> x[2], rev=true)
+    vertices_list = collect(vertices(g))
+    scores_arr = Vector{Tuple{Int,Float64}}(undef, length(vertices_list))
 
-    return pairs
+    @threads for i in eachindex(vertices_list)
+        v = vertices_list[i]
+        score = calculate_phi_score(g, v, t_prim, observers, beta)
+        scores_arr[i] = (v, score)
+    end
+
+    return sort(scores_arr, by=x -> x[2], rev=true)
 end
 
 
@@ -108,20 +115,16 @@ function calculate_phi_score(graph::SimpleGraph, s::Int, t_prim::Vector{Int}, ob
 
     L_s = zeros(K - 1, K - 1)
     for i in 1:K-1
+        len_i = length(obs_paths[observers[i+1]]) - 1
         for j in i:K-1
-            len_i = length(obs_paths[observers[i+1]]) - 1
             len_j = length(obs_paths[observers[j+1]]) - 1
-            union_ij = length(Set([obs_paths[observers[i+1]]; obs_paths[observers[j+1]]])) - 1
+            union_ij = length(union(obs_paths[observers[i+1]], obs_paths[observers[j+1]])) - 1
             # basic set theory (|A| + |B| - |A ⊎ B|)
             L_s[i, j] = L_s[j, i] = sig_2 * (len_i + len_j - union_ij)
         end
     end
     det_L = det(L_s)
-    if det_L == 0
-        L_s += 1e-6 * I
-        det_L = det(L_s)
-    end
-    L_s_inv = inv(L_s)
+    L_s_inv = cholesky(L_s).L \ I
 
     mu = 1 / beta
     source_paths::Dict{Int,Vector{Int}} = paths_to_target(tree, s, observers)
@@ -129,7 +132,6 @@ function calculate_phi_score(graph::SimpleGraph, s::Int, t_prim::Vector{Int}, ob
     mu_s = [mu * (length(source_paths[observers[i]]) - 1 - ref_path_length) for i in 2:K]
 
     temp_vec = t_prim - mu_s
-
     phi = -(transpose(temp_vec) * L_s_inv * temp_vec) - log(det_L)
     return phi
 end

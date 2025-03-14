@@ -3,11 +3,17 @@ using GraphPlot
 using Random
 
 function make_ER_graph(; V::Int, p::Float64)::SimpleGraph
-    g = Graphs.erdos_renyi(V, p)
+    g = erdos_renyi(V, p)
+    components = connected_components(g)
+    for i in eachindex(components)[2:end]
+        u = rand(components[i-1])
+        v = rand(components[i])
+        add_edge!(g, u, v)
+    end
     return g
 end
 
-function make_BA_graph(; V::Int, n0::Int = missing, k::Int)::SimpleGraph
+function make_BA_graph(; V::Int, n0::Int=missing, k::Int)::SimpleGraph
     if ismissing(n0)
         n0 = k
     end
