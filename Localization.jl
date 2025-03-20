@@ -45,10 +45,9 @@ function LPTVA_loc(g::SimpleGraph, obs_data::Dict{Int,Int}, beta)::Vector{Tuple{
     vertices_list = collect(vertices(g))
     scores_arr = Vector{Tuple{Int,Float64}}(undef, length(vertices_list))
 
-    @threads for i in eachindex(vertices_list)
-        v = vertices_list[i]
-        score = calculate_phi_score(g, v, t_prim, observers, beta)
-        scores_arr[i] = (v, score)
+    @threads for i in 1:nv(g)
+        score = calculate_phi_score(g, i, t_prim, observers, beta)
+        scores_arr[i] = (i, score)
     end
 
     return sort(scores_arr, by=x -> x[2], rev=true)
