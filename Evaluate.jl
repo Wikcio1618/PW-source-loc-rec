@@ -48,16 +48,16 @@ function evaluate_reconstruct_to_file(
         for _ in 1:max(1, (round(Int, N / 25)))
             g = graph_type_dict[graph_type](; graph_args...)
             for _ in 1:5
-                loc_data::LocData = propagate_SI!(og, r, beta)
+                loc_data::LocData = propagate_SI!(g, r, beta)
                 # for each modification
                 for _ in 1:5
                     if !ismissing(modify_type)
                         new_g = modify_type_dict[modify_type](g, dj)
                         reconstruct_thresh!(new_g, hide_thresh, add_thresh, reconstruct_type)
                         if loc_type == :pearson
-                            loc_result = method_type_dict[loc_type](new_g, loc_data.obs_data)
+                            loc_result = loc_type_dict[loc_type](new_g, loc_data.obs_data)
                         else
-                            loc_result = method_type_dict[loc_type](new_g, loc_data.obs_data, beta)
+                            loc_result = loc_type_dict[loc_type](new_g, loc_data.obs_data, beta)
                         end
                         rank = calc_rank(loc_data, loc_result, graph_args[:V])
                         prec = calc_prec(loc_data, loc_result)
@@ -95,15 +95,15 @@ function evaluate_modify_to_file(
         for _ in 1:max(1, (round(Int, N / 25)))
             g = graph_type_dict[graph_type](; graph_args...)
             for _ in 1:5
-                loc_data::LocData = propagate_SI!(og, r, beta)
+                loc_data::LocData = propagate_SI!(g, r, beta)
                 # for each modification
                 for _ in 1:5
                     if !ismissing(modify_type)
                         modify_type_dict[modify_type](g, dj; inplace=true)
                         if loc_type == :pearson
-                            loc_result = method_type_dict[loc_type](g, loc_data.obs_data)
+                            loc_result = loc_type_dict[loc_type](g, loc_data.obs_data)
                         else
-                            loc_result = method_type_dict[loc_type](g, loc_data.obs_data, beta)
+                            loc_result = loc_type_dict[loc_type](g, loc_data.obs_data, beta)
                         end
                         rank = calc_rank(loc_data, loc_result, graph_args[:V])
                         prec = calc_prec(loc_data, loc_result)
@@ -131,13 +131,13 @@ function evaluate_original_to_file(
         println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta,graph_args=$graph_args")
         println(io, "rank,precision")
         for _ in 1:max(1, (round(Int, N / 10)))
-            og = graph_type_dict[graph_type](; graph_args...)
+            g = graph_type_dict[graph_type](; graph_args...)
             for _ in 1:10
-                loc_data::LocData = propagate_SI!(og, r, beta)
+                loc_data::LocData = propagate_SI!(g, r, beta)
                 if loc_type == :pearson
-                    loc_result = method_type_dict[loc_type](og, loc_data.obs_data)
+                    loc_result = loc_type_dict[loc_type](g, loc_data.obs_data)
                 else
-                    loc_result = method_type_dict[loc_type](og, loc_data.obs_data, beta)
+                    loc_result = loc_type_dict[loc_type](g, loc_data.obs_data, beta)
                 end
                 rank = calc_rank(loc_data, loc_result, graph_args[:V])
                 prec = calc_prec(loc_data, loc_result)
@@ -181,5 +181,5 @@ function calc_jaccard(g1::SimpleGraph, g2::SimpleGraph)::Float64
     intersection_size = length(intersect(edges1, edges2))
     union_size = length(union(edges1, edges2))
 
-    return union_size == 0 ? 0.0 : intersection_size / union_size
+    return union_size == 0 ? 1.0 : 1 - intersection_size / union_size
 end
