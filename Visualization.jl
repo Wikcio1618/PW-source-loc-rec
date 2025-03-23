@@ -16,7 +16,6 @@ function show_obs_graph(og::ObsGraph, loc_data::LocData; should_label_idx::Bool=
             value = get(loc_data.obs_data, i, 0)
             green_intensity = (value - loc_data.t_start) / (maximum(values(loc_data.obs_data)) - loc_data.t_start)
             node_colors[i] = RGB(0, (green_intensity == NaN) ? 1 : 1 - green_intensity, 0)
-
         end
     end
 

@@ -2,6 +2,7 @@ using Graphs
 using GraphPlot
 using Random
 
+
 function make_ER_graph(; V::Int, p::Float64)::SimpleGraph
     g = erdos_renyi(V, p)
     components = connected_components(g)
@@ -21,26 +22,119 @@ function make_BA_graph(; V::Int, n0::Int=missing, k::Int)::SimpleGraph
     return g
 end
 
-function get_facebook_graph()::SimpleGraph
-    open("networks/facebook_edges.csv", "r") do io
-        readline(io)
-        lines = split(read(io, String), '\n')
+function get_FB_graph()::SimpleGraph
+    return read_edges_file("networks/facebook_edges.csv")
+end
 
-        unq_dict = Dict{Int,Int}() # maps new node number to next unique integer
-        unq = 1
-        g = SimpleGraph(800)
-        for line in lines
-            num_b, num_b = [parse(Int, num) for num in split(line, ',')]
-            if !haskey(unq_dict, num_A)
-                unq_dict[num_A] = unq
-                unq += 1
+function get_YST_graph()::SimpleGraph
+    return read_edges_file("networks/yst_edges.csv")
+end
+
+
+function get_USA_graph()::SimpleGraph
+    open("networks/USAir97.net", "r") do io
+        lines = readlines(io)
+        edge_start = findfirst(l -> occursin("*edges", lowercase(l)), lines)
+        @assert edge_start !== nothing "No *edges section found in the file"
+
+        g = SimpleGraph()
+        for i in edge_start+1:length(lines)
+            tokens = split(lines[i])
+            if length(tokens) < 2
+                continue
             end
-            if !haskey(unq_dict, num_B)
-                unq_dict[num_B] = unq
-                unq += 1
+            u, v = parse(Int, tokens[1]), parse(Int, tokens[2])
+            if u != v
+                while max(u, v) > nv(g)
+                    add_vertex!(g)
+                end
+                add_edge!(g, u, v)
             end
-            add_edge!(g, unq_dict[num_A], unq_dict[num_B])
         end
-        g
+        return g
     end
 end
+
+function get_INF_graph()::SimpleGraph
+    return read_gml_file("networks/inf_edges.gml")
+end
+
+function read_edges_file(path::String)::SimpleGraph
+    open(path, "r") do io
+        lines = readlines(io)
+        edges = []
+        unq_dict = Dict{Int,Int}()
+        unq = 1
+
+        for line in lines
+            u, v = [parse(Int, num) for num in split(line, [',', ' '])]
+            if !haskey(unq_dict, u)
+                unq_dict[u] = unq
+                unq += 1
+            end
+            if !haskey(unq_dict, v)
+                unq_dict[v] = unq
+                unq += 1
+            end
+            if u != v
+                push!(edges, (u, v))
+            end
+        end
+        g = SimpleGraph(unq-1)
+        for (u, v) in edges
+            add_edge!(g, unq_dict[u], unq_dict[v])
+        end
+        return g
+    end
+end
+
+function read_gml_file(file_path)::SimpleGraph
+    node_map = Dict{Int,Int}()
+    edges = []
+    node_id_set = Set{Int}()
+
+    open(file_path, "r") do io
+        source = nothing
+        for line in eachline(io)
+            words = split(strip(line))
+            if isempty(words)
+                continue
+            elseif words[1] == "id"
+                node_id = parse(Int, words[2])
+                push!(node_id_set, node_id)
+            elseif words[1] == "source"
+                source = parse(Int, words[2])
+            elseif words[1] == "target" && !isnothing(source)
+                target = parse(Int, words[2])
+                if source != target
+                    push!(edges, (source, target))
+                end
+                source = nothing
+            end
+        end
+    end
+
+    sorted_ids = sort(collect(node_id_set))
+    for (new_idx, old_idx) in enumerate(sorted_ids)
+        node_map[old_idx] = new_idx
+    end
+
+    num_nodes = length(node_map)
+    g = SimpleGraph(num_nodes)
+
+    for (src, dst) in edges
+        add_edge!(g, node_map[src], node_map[dst])
+    end
+
+    return g
+end
+
+
+const graph_type_dict = Dict(
+    :ba => make_BA_graph,
+    :er => make_ER_graph,
+    :usa => get_USA_graph,
+    :fb => get_FB_graph,
+    :inf => get_INF_graph,
+    :yst => get_YST_graph
+)

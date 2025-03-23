@@ -3,19 +3,20 @@ using Random
 
 function modify_add(g::SimpleGraph, dj::Float64; inplace=false)::SimpleGraph
     @assert 0.0 <= dj < 1.0
-    if !inplace
-        g = copy(g)
-    end
-    V = nv(g)
-    M = round(Int, dj / (1 - dj) * ne(g))
+    g_mod = inplace ? g : copy(g)
+
+    V = nv(g_mod)
+    M = round(Int, dj / (1 - dj) * ne(g_mod))
+
     for _ in 1:M
         u, v = rand(1:V, 2)
-        while has_edge(g, u, v) || u == v
+        while has_edge(g_mod, u, v) || u == v
             u, v = rand(1:V, 2)
         end
-        add_edge!(g, u, v)
+        add_edge!(g_mod, u, v)
     end
-    return g
+
+    return g_mod
 end
 
 
@@ -44,7 +45,10 @@ function modify_fluctuate(g::SimpleGraph, dj::Float64)::SimpleGraph
     # 1. 2 linki losowa
     # 2. (A - B; C - D) -> (A - C; B - D)
 
-
-
     return g
 end
+
+const modify_type_dict = Dict(
+    :hide => modify_hide,
+    :add => modify_add
+)

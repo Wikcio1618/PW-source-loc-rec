@@ -29,7 +29,6 @@ function pearson_loc(g::SimpleGraph, obs_data::Dict{Int,Int})::Vector{Tuple{Int6
     return pairs
 end
 
-
 function LPTVA_loc(g::SimpleGraph, obs_data::Dict{Int,Int}, beta)::Vector{Tuple{Int64,Float64}}
     pairs = sort(collect(zip(keys(obs_data), values(obs_data))), by=x -> x[2])
     observers = [p[1] for p in pairs]
@@ -163,3 +162,9 @@ function path_rec(tree::SimpleGraph, target::Int, visited::Set{Int}, curr_path::
         end
     end
 end
+
+const loc_type_dict = Dict(
+    :pearson => pearson_loc,
+    :lptva => LPTVA_loc,
+    :gmla => GMLA_loc
+)
