@@ -1,24 +1,17 @@
-include("MainModule.jl")
-using .MainModule
+include("Evaluation.jl")
 
 using Statistics
 using Plots
 
-N = 2000
-graph_type = :ba
-graph_args = Dict(
-    :V => 1000,
-    :n0 => 4,
-    :k => 4
-)
+N = 10
+graph_type = :fb
 beta = 0.8
 r = 0.2
 loc_type = :pearson
-modify_type = :add
-reconstruct_type = :cn
+modify_type = :hide
+reconstruct_type = :ra
 dj = 0.2
-A = [0]
-H = 0:100:400
+k_vec = 0:10:200
 
 
 
@@ -29,5 +22,5 @@ H = 0:100:400
 #         evaluate_reconstruct_to_file(path, graph_type, loc_type, beta, r, N, graph_args, modify_type, dj, reconstruct_type, hide_thresh, add_thresh)
 #     end
 # end
-
-calc_auc(:inf, :cn)
+path = "data/rec_$(String(graph_type))_k$(k_vec[begin])_$(k_vec[end])_$(String(loc_type))_$(String(modify_type))_$(String(reconstruct_type)).csv"
+graph_reconstruct_precision_to_file(path, graph_type, loc_type, beta, r, N, modify_type, dj, reconstruct_type, k_vec)

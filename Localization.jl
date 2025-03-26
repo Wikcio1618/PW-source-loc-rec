@@ -1,5 +1,4 @@
 include("StructModule.jl")
-using .StructModule
 
 using Graphs
 using Statistics

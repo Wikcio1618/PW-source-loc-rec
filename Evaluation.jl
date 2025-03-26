@@ -4,10 +4,63 @@ include("GraphCreation.jl")
 include("StructModule.jl")
 include("Modification.jl")
 include("Reconstruction.jl")
-import .StructModule: LocData
 
 using Graphs
 using Random
+using DataStructures
+
+function graph_reconstruct_precision_to_file(
+    path::String,
+    graph::Union{Symbol,SimpleGraph},
+    loc_type::Symbol,
+    beta::Float64,
+    r::Float64,
+    N::Int,
+    modify_type::Symbol,
+    dj::Float64,
+    reconstruct_type::Symbol,
+    k_vec,
+    graph_args::Dict=Dict()
+)
+    if typeof(graph) == Symbol
+        @assert haskey(graph_type_dict, graph_type)
+        graph = graph_type_dict[graph](; graph_args...)
+    end
+    @assert haskey(loc_type_dict, loc_type)
+    @assert haskey(modify_type_dict, modify_type)
+    @assert haskey(score_type_dict, reconstruct_type)
+
+    open(path, "w") do io
+        println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta,graph_args=$graph_args,modify_type=$modify_type,dj=$dj,reconstruct_type=$reconstruct_type")
+        println(io, "k,avg_precision,avg_dj")
+        g = graph_type_dict[graph_type](; graph_args...)
+        prec_cumulative = zeros(length(k_vec))
+        # dj_cumulative = zeros(length(k_vec))
+        for _ in 1:N
+            loc_data::LocData = propagate_SI!(g, r, beta)
+            sg, new_loc_data = modify_type_dict[modify_type](g, loc_data, dj)
+            heap = PriorityQueue(score_type_dict[reconstruct_type](sg))
+            for i in eachindex(k_vec)
+                new_g = reconstruct_top_k!(
+                    sg,
+                    heap,
+                    i == 1 ? k_vec[i] : k_vec[i] - k_vec[i-1];
+                    type=modify_type == :hide ? :add : :hide
+                )
+                loc_result =
+                    loc_type == :pearson ?
+                    loc_type_dict[loc_type](new_g, new_loc_data.obs_data) :
+                    loc_type_dict[loc_type](new_g, new_loc_data.obs_data, beta)
+
+                prec_cumulative[i] += calc_prec(new_loc_data, loc_result)
+                # dj_cumulative[i] += calc_jaccard(g, new_g)
+            end
+        end
+        for (i, k) in enumerate(k_vec)
+            println(io, "$k,$(prec_cumulative[i]/N)")
+        end
+    end
+end
 
 function evaluate_reconstruct_to_file(
     path::String,
@@ -158,9 +211,9 @@ function calc_prec(loc_data::LocData, loc_result::Vector{Tuple{Int,Float64}})::F
     return predicted_exequo ? (1 / num_exequo) : 0
 end
 
-function calc_jaccard(g1::SimpleGraph, g2::SimpleGraph)::Float64
+function calc_jaccard(g1::SimpleGraph, g2::SimpleGraph, vmap::Vector{Int})::Float64
     edges1 = Set([(min(e.src, e.dst), max(e.src, e.dst)) for e in edges(g1)])
-    edges2 = Set([(min(e.src, e.dst), max(e.src, e.dst)) for e in edges(g2)])
+    edges2 = Set([(min(vmap[e.src], vmap[e.dst]), max(vmap[e.src], vmap[e.dst])) for e in edges(g2)])
 
     intersection_size = length(intersect(edges1, edges2))
     union_size = length(union(edges1, edges2))
@@ -169,7 +222,7 @@ function calc_jaccard(g1::SimpleGraph, g2::SimpleGraph)::Float64
 end
 
 # LINK PREDICTION
-function calc_prec_link_pred(graph_type::Symbol, pred_type::Symbol; graph_args::Dict = Dict())
+function calc_prec_link_pred(graph_type::Symbol, pred_type::Symbol; graph_args::Dict=Dict())
     @assert haskey(graph_type_dict, graph_type)
     @assert haskey(score_type_dict, pred_type)
 
@@ -205,7 +258,7 @@ function calc_prec_link_pred(graph_type::Symbol, pred_type::Symbol; graph_args::
 
         # Compute precision: fraction of correctly predicted links in top-k
         test_set = Set(test_edges)
-        top_k_predictions = predicted_links[1:min(k , length(predicted_links))]
+        top_k_predictions = predicted_links[1:min(k, length(predicted_links))]
         correct_predictions = count(x -> x in test_set, top_k_predictions)
         push!(precisions, correct_predictions / k)
     end
