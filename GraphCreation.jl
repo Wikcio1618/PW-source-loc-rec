@@ -30,9 +30,25 @@ function get_YST_graph()::SimpleGraph
     return read_edges_file("networks/yst_edges.csv")
 end
 
-
 function get_USA_graph()::SimpleGraph
-    open("networks/USAir97.net", "r") do io
+    return read_net_file("networks/usa.net")
+end
+
+function get_CAL_graph()::SimpleGraph
+    return read_net_file("networks/california.net")
+end
+
+
+function get_INF_graph()::SimpleGraph
+    return read_gml_file("networks/inf_edges.gml")
+end
+
+function get_EMAIL_graph()::SimpleGraph
+    return read_edges_file("networks/email.txt")
+end
+
+function read_net_file(path)::SimpleGraph
+    open(path, "r") do io
         lines = readlines(io)
         edge_start = findfirst(l -> occursin("*edges", lowercase(l)), lines)
         @assert edge_start !== nothing "No *edges section found in the file"
@@ -53,10 +69,6 @@ function get_USA_graph()::SimpleGraph
         end
         return g
     end
-end
-
-function get_INF_graph()::SimpleGraph
-    return read_gml_file("networks/inf_edges.gml")
 end
 
 function read_edges_file(path::String)::SimpleGraph
@@ -136,5 +148,7 @@ const graph_type_dict = Dict(
     :usa => get_USA_graph,
     :fb => get_FB_graph,
     :inf => get_INF_graph,
-    :yst => get_YST_graph
+    :yst => get_YST_graph,
+    :email => get_EMAIL_graph,
+    :cal => get_CAL_graph
 )

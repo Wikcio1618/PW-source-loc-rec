@@ -1,7 +1,11 @@
-include("StructModule.jl")
-
 using Graphs
 using Random
+
+struct LocData
+    obs_data::Dict{Int,Int}
+    source::Int
+    t_start::Int
+end
 
 function propagate_SI!(g::SimpleGraph, r::Float64, beta::Float64, t_max::Int=10^11)::LocData
     @assert 0.0 < beta < 1.0

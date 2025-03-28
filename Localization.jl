@@ -1,5 +1,3 @@
-include("StructModule.jl")
-
 using Graphs
 using Statistics
 using LinearAlgebra
@@ -141,12 +139,12 @@ function paths_to_target(tree::SimpleGraph, target::Int, nodes::Vector{Int})::Di
 
     for i in nodes
         visited = Set{Int}(i)
-        path_rec(tree, target, visited, [i], paths)
+        path_rec!(tree, target, visited, [i], paths)
     end
     return paths
 end
 
-function path_rec(tree::SimpleGraph, target::Int, visited::Set{Int}, curr_path::Vector{Int}, paths::Dict{Int,Vector{Int}})
+function path_rec!(tree::SimpleGraph, target::Int, visited::Set{Int}, curr_path::Vector{Int}, paths::Dict{Int,Vector{Int}})
     curr = curr_path[end]
     # found target
     if curr == target
@@ -157,7 +155,7 @@ function path_rec(tree::SimpleGraph, target::Int, visited::Set{Int}, curr_path::
     for nei in neighbors(tree, curr)
         if nei ∉ visited
             push!(visited, nei)
-            path_rec(tree, target, visited, [curr_path; nei], paths)
+            path_rec!(tree, target, visited, [curr_path; nei], paths)
         end
     end
 end

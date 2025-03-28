@@ -1,7 +1,6 @@
 include("Localization.jl")
 include("Propagation.jl")
 include("GraphCreation.jl")
-include("StructModule.jl")
 include("Modification.jl")
 include("Reconstruction.jl")
 
@@ -9,9 +8,8 @@ using Graphs
 using Random
 using DataStructures
 
-function graph_reconstruct_precision_to_file(
-    path::String,
-    graph::Union{Symbol,SimpleGraph},
+function evaluate_reconstruct_to_file(
+    graph_type::Symbol,
     loc_type::Symbol,
     beta::Float64,
     r::Float64,
@@ -19,24 +17,25 @@ function graph_reconstruct_precision_to_file(
     modify_type::Symbol,
     dj::Float64,
     reconstruct_type::Symbol,
-    k_vec,
-    graph_args::Dict=Dict()
+    k_vec
 )
-    if typeof(graph) == Symbol
-        @assert haskey(graph_type_dict, graph_type)
-        graph = graph_type_dict[graph](; graph_args...)
-    end
+    @assert haskey(graph_type_dict, graph_type)
     @assert haskey(loc_type_dict, loc_type)
     @assert haskey(modify_type_dict, modify_type)
     @assert haskey(score_type_dict, reconstruct_type)
 
+    path = "data/rec_$(String(reconstruct_type))_dj$(round(Int, dj*100))_$(String(graph_type))_$(loc_type)_r$(round(Int,r*100))_beta$(round(Int, beta*100)).csv"
+
     open(path, "w") do io
-        println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta,graph_args=$graph_args,modify_type=$modify_type,dj=$dj,reconstruct_type=$reconstruct_type")
+        println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta,modify_type=$modify_type,dj=$dj,reconstruct_type=$reconstruct_type")
         println(io, "k,avg_precision,avg_dj")
-        g = graph_type_dict[graph_type](; graph_args...)
+        g = graph_type_dict[graph_type]()
         prec_cumulative = zeros(length(k_vec))
         # dj_cumulative = zeros(length(k_vec))
-        for _ in 1:N
+        for t in 1:N
+            if t % 1000 == 0
+                println("Starting $t iteration")
+            end
             loc_data::LocData = propagate_SI!(g, r, beta)
             sg, new_loc_data = modify_type_dict[modify_type](g, loc_data, dj)
             heap = PriorityQueue(score_type_dict[reconstruct_type](sg))
@@ -62,124 +61,64 @@ function graph_reconstruct_precision_to_file(
     end
 end
 
-function evaluate_reconstruct_to_file(
-    path::String,
+
+function evaluate_original_to_file(
+    graph_type::Symbol,
+    loc_type::Symbol,
+    beta::Float64,
+    r::Float64,
+    N::Int
+)
+    @assert haskey(graph_type_dict, graph_type)
+    @assert haskey(loc_type_dict, loc_type)
+    path = "data/loc_$(String(graph_type))_$(loc_type)_r$(round(Int,r*100))_beta$(round(Int, beta*100)).csv"
+    open(path, "w") do io
+        println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta,modify_type=$modify_type,dj=$dj")
+        println(io, "rank,precision")
+        g = graph_type_dict[graph_type]()
+        for _ in 1:N
+            loc_data::LocData = propagate_SI!(g, r, beta)
+            loc_result = loc_type == :pearson ?
+                         loc_type_dict[loc_type](g, loc_data.obs_data) :
+                         loc_type_dict[loc_type](g, loc_data.obs_data, beta)
+            rank = calc_rank(loc_data, loc_result, nv(g))
+            prec = calc_prec(loc_data, loc_result)
+            println(io, "$rank,$prec")
+        end
+    end
+end
+
+
+function evaluate_modify_to_file(
     graph_type::Symbol,
     loc_type::Symbol,
     beta::Float64,
     r::Float64,
     N::Int,
-    graph_args::Dict,
     modify_type::Symbol,
-    dj::Float64,
-    reconstruct_type::Symbol,
-    hide_thresh::Int,
-    add_thresh::Int
+    dj::Float64
 )
     @assert haskey(graph_type_dict, graph_type)
     @assert haskey(loc_type_dict, loc_type)
     @assert haskey(modify_type_dict, modify_type)
-    @assert haskey(score_type_dict, reconstruct_type)
-
+    path = "data/mod_$(String(modify_type))_dj$(round(Int, dj*100))_$(String(graph_type))_$(loc_type)_r$(round(Int,r*100))_beta$(round(Int, beta*100)).csv"
     open(path, "w") do io
-        println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta,graph_args=$graph_args,modify_type=$modify_type,dj=$dj,reconstruct_type=$reconstruct_type,hide_thresh=$hide_thresh,add_thresh=$add_thresh")
-        println(io, "rank,precision,dj")
-        for _ in 1:max(1, (round(Int, N / 1)))
-            g = graph_type_dict[graph_type](; graph_args...)
-            for _ in 1:1
-                loc_data::LocData = propagate_SI!(g, r, beta)
-                # for each modification
-                for _ in 1:1
-                    new_g = modify_type_dict[modify_type](g, dj; inplace=true)
-                    reconstruct_thresh!(new_g, hide_thresh, add_thresh, reconstruct_type)
-                    if loc_type == :pearson
-                        loc_result = loc_type_dict[loc_type](new_g, loc_data.obs_data)
-                    else
-                        loc_result = loc_type_dict[loc_type](new_g, loc_data.obs_data, beta)
-                    end
-                    rank = calc_rank(loc_data, loc_result, graph_args[:V])
-                    prec = calc_prec(loc_data, loc_result)
-                    dj = calc_jaccard(g, new_g)
-                    println(io, "$rank,$prec,$dj")
-                end
-            end
-        end
-    end
-end
-
-function evaluate_modify_to_file(
-    path::String,
-    graph_type::Symbol,
-    loc_type::Symbol,
-    beta::Float64,
-    r::Float64,
-    N::Int,
-    graph_args::Dict,
-    modify_type::Symbol,
-    dj::Float64,
-)
-    @assert haskey(graph_type_dict, graph_type)
-    @assert haskey(loc_type_dict, loc_type)
-    @assert (
-        if !ismissing(modify_type)
-            haskey(modify_type_dict, modify_type)
-        end
-    )
-
-    open(path, "w") do io
-        println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta,graph_args=$graph_args,modify_type=$modify_type,dj=$dj")
+        println(io, "N=$N,modify=$modify_type,graph=$graph_type,dj=$dj,method=$loc_type,r=$r,beta=$beta")
         println(io, "rank,precision")
-        for _ in 1:max(1, (round(Int, N / 25)))
-            g = graph_type_dict[graph_type](; graph_args...)
-            for _ in 1:5
-                loc_data::LocData = propagate_SI!(g, r, beta)
-                # for each modification
-                for _ in 1:5
-                    if !ismissing(modify_type)
-                        modify_type_dict[modify_type](g, dj; inplace=true)
-                        if loc_type == :pearson
-                            loc_result = loc_type_dict[loc_type](g, loc_data.obs_data)
-                        else
-                            loc_result = loc_type_dict[loc_type](g, loc_data.obs_data, beta)
-                        end
-                        rank = calc_rank(loc_data, loc_result, graph_args[:V])
-                        prec = calc_prec(loc_data, loc_result)
-                        println(io, "$rank,$prec")
-                    end
-                end
+        for t in 1:N
+            if t % 100 == 0
+                println("Starting $t iteration")
             end
-        end
-    end
-end
+            g = graph_type_dict[graph_type]()
+            loc_data::LocData = propagate_SI!(g, r, beta)
+            sg, new_loc_data = modify_type_dict[modify_type](g, loc_data, dj)
+            loc_result = loc_type == :pearson ?
+                         loc_type_dict[loc_type](sg, new_loc_data.obs_data) :
+                         loc_type_dict[loc_type](sg, new_loc_data.obs_data, beta)
 
-function evaluate_original_to_file(
-    path::String,
-    graph_type::Symbol,
-    loc_type::Symbol,
-    beta::Float64,
-    r::Float64,
-    N::Int,
-    graph_args::Dict
-)
-    @assert haskey(graph_type_dict, graph_type)
-    @assert haskey(loc_type_dict, loc_type)
-
-    open(path, "w") do io
-        println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta,graph_args=$graph_args")
-        println(io, "rank,precision")
-        for _ in 1:max(1, (round(Int, N / 10)))
-            g = graph_type_dict[graph_type](; graph_args...)
-            for _ in 1:10
-                loc_data::LocData = propagate_SI!(g, r, beta)
-                if loc_type == :pearson
-                    loc_result = loc_type_dict[loc_type](g, loc_data.obs_data)
-                else
-                    loc_result = loc_type_dict[loc_type](g, loc_data.obs_data, beta)
-                end
-                rank = calc_rank(loc_data, loc_result, graph_args[:V])
-                prec = calc_prec(loc_data, loc_result)
-                println(io, "$rank,$prec")
-            end
+            rank = calc_rank(new_loc_data, loc_result, nv(sg))
+            prec = calc_prec(new_loc_data, loc_result)
+            println(io, "$rank,$prec")
         end
     end
 end
@@ -211,15 +150,6 @@ function calc_prec(loc_data::LocData, loc_result::Vector{Tuple{Int,Float64}})::F
     return predicted_exequo ? (1 / num_exequo) : 0
 end
 
-function calc_jaccard(g1::SimpleGraph, g2::SimpleGraph, vmap::Vector{Int})::Float64
-    edges1 = Set([(min(e.src, e.dst), max(e.src, e.dst)) for e in edges(g1)])
-    edges2 = Set([(min(vmap[e.src], vmap[e.dst]), max(vmap[e.src], vmap[e.dst])) for e in edges(g2)])
-
-    intersection_size = length(intersect(edges1, edges2))
-    union_size = length(union(edges1, edges2))
-
-    return union_size == 0 ? 1.0 : 1 - intersection_size / union_size
-end
 
 # LINK PREDICTION
 function calc_prec_link_pred(graph_type::Symbol, pred_type::Symbol; graph_args::Dict=Dict())

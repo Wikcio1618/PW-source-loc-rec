@@ -15,9 +15,7 @@ function reconstruct_top_k!(g::SimpleGraph, heap::PriorityQueue, k::Int; type=:a
     mod_func = type == :add ? add_edge! : rem_edge!
     for _ in 1:k
         (u, v) = dequeue!(heap)
-        # println("ne=$(ne(g_mod))")
-        # println(has_edge(g, u, v))
-        add_edge!(g_mod, u, v)
+        mod_func(g_mod, u, v)
     end
     return g_mod
 end
@@ -110,14 +108,12 @@ function get_SRW_scores(g::SimpleGraph; lim=3)
         end
         superposed_p_vecs[v, :] .= superposition
     end
-
     for x in vertices(g), y in vertices(g)
         if x != y
             pair = (min(x, y), max(x, y))
             scores[pair] = (degs[x] * superposed_p_vecs[x, y] + degs[y] * superposed_p_vecs[y, x])
         end
     end
-
     return scores
 end
 
