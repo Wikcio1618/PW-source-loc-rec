@@ -9,13 +9,18 @@ Modifies the `heap` and modifies the graph depending on `inplace`
 function reconstruct_top_k!(g::SimpleGraph, heap::PriorityQueue, k::Int; type=:add, inplace=false)::SimpleGraph
     @assert type in [:add, :hide]
     @assert (k < length(heap))
-
+    if type == :add
+        @assert k < nv(g)^2 - ne(g) # number of possible new edges is greater than k (while loop is safe)
+    else
+        @assert k < ne(g)
+    end
     g_mod = inplace ? g : copy(g)
-
     mod_func = type == :add ? add_edge! : rem_edge!
-    for _ in 1:k
+    while (k > 0)
         (u, v) = dequeue!(heap)
-        mod_func(g_mod, u, v)
+        if mod_func(g_mod, u, v)
+            k += -1
+        end
     end
     return g_mod
 end

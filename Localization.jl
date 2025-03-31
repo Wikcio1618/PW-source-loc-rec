@@ -32,7 +32,7 @@ function LPTVA_loc(g::SimpleGraph, obs_data::Dict{Int,Int}, beta)::Vector{Tuple{
     times = [p[2] for p in pairs]
 
     K = length(observers)
-    if K < 2
+    if K < 3
         throw(ArgumentError("At least two observers are required."))
     end
 
@@ -60,7 +60,7 @@ function GMLA_loc(g::SimpleGraph, obs_data::Dict{Int,Int}, beta, K0=missing)::Ve
             K0 = length(obs_data)
         end
     end
-    if K0 < 2
+    if K0 < 3
         throw(ArgumentError("At least two observers are required."))
     end
 
@@ -118,16 +118,15 @@ function calculate_phi_score(graph::SimpleGraph, s::Int, t_prim::Vector{Int}, ob
             L_s[i, j] = L_s[j, i] = sig_2 * (len_i + len_j - union_ij)
         end
     end
-    det_L = det(L_s)
-    L_s_inv = cholesky(L_s).L \ I
+    L_s_inv = inv(L_s)
 
     mu = 1 / beta
     source_paths::Dict{Int,Vector{Int}} = paths_to_target(tree, s, observers)
     ref_path_length = length(source_paths[observers[1]]) - 1
     mu_s = [mu * (length(source_paths[observers[i]]) - 1 - ref_path_length) for i in 2:K]
 
-    temp_vec = t_prim - mu_s
-    phi = -(transpose(temp_vec) * L_s_inv * temp_vec) - log(det_L)
+    temp_vec = t_prim .- mu_s
+    phi = -(transpose(temp_vec) * L_s_inv * temp_vec) - logdet(L_s)
     return phi
 end
 
@@ -135,29 +134,35 @@ end
 Given node `target` and TREE graph `g` return dictionary mapping index of each target node in the graph to the vector of indexes defining a path from `nodes` to the `target`
 """
 function paths_to_target(tree::SimpleGraph, target::Int, nodes::Vector{Int})::Dict{Int,Vector{Int}}
-    paths = Dict(i => Vector{Int}() for i in nodes)
-
-    for i in nodes
-        visited = Set{Int}(i)
-        path_rec!(tree, target, visited, [i], paths)
+    paths = Dict{Int,Vector{Int}}()
+    for src in nodes
+        paths[src] = bfs_path(tree, src, target)
     end
     return paths
 end
 
-function path_rec!(tree::SimpleGraph, target::Int, visited::Set{Int}, curr_path::Vector{Int}, paths::Dict{Int,Vector{Int}})
-    curr = curr_path[end]
-    # found target
-    if curr == target
-        paths[curr_path[1]] = curr_path
-        return
+function bfs_path(tree::SimpleGraph, src::Int, target::Int)::Vector{Int}
+    if src == target
+        return [target]
     end
-    # visit all the neighbors
-    for nei in neighbors(tree, curr)
-        if nei ∉ visited
-            push!(visited, nei)
-            path_rec!(tree, target, visited, [curr_path; nei], paths)
+
+    queue = [(src, [src])] 
+    visited = Set{Int}([src])
+
+    while !isempty(queue)
+        curr, path = popfirst!(queue)
+        for nei in neighbors(tree, curr)
+            if nei ∉ visited
+                new_path = [path; nei]
+                if nei == target
+                    return new_path
+                end
+                push!(queue, (nei, new_path))
+                push!(visited, nei)
+            end
         end
     end
+    return []
 end
 
 const loc_type_dict = Dict(

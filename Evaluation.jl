@@ -28,35 +28,39 @@ function evaluate_reconstruct_to_file(
 
     open(path, "w") do io
         println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta,modify_type=$modify_type,dj=$dj,reconstruct_type=$reconstruct_type")
-        println(io, "k,avg_precision,avg_dj")
+        println(io, "k,prec,std_err")
         g = graph_type_dict[graph_type]()
-        prec_cumulative = zeros(length(k_vec))
-        # dj_cumulative = zeros(length(k_vec))
+        precs = Array{Float64, 2}(undef, (length(k_vec), N))
         for t in 1:N
-            if t % 1000 == 0
-                println("Starting $t iteration")
+            if t % round(Int, N / 10) == 0
+                println("$reconstruct_type: Starting $t iteration")
             end
             loc_data::LocData = propagate_SI!(g, r, beta)
             sg, new_loc_data = modify_type_dict[modify_type](g, loc_data, dj)
-            heap = PriorityQueue(score_type_dict[reconstruct_type](sg))
+            heap = PriorityQueue(
+                modify_type == :hide ? Base.Order.Reverse : Base.Order.Forward,
+                score_type_dict[reconstruct_type](sg)
+            )
             for i in eachindex(k_vec)
-                new_g = reconstruct_top_k!(
+                reconstruct_top_k!(
                     sg,
                     heap,
                     i == 1 ? k_vec[i] : k_vec[i] - k_vec[i-1];
-                    type=modify_type == :hide ? :add : :hide
+                    type=modify_type == :hide ? :add : :hide,
+                    inplace=true
                 )
                 loc_result =
                     loc_type == :pearson ?
-                    loc_type_dict[loc_type](new_g, new_loc_data.obs_data) :
-                    loc_type_dict[loc_type](new_g, new_loc_data.obs_data, beta)
+                    loc_type_dict[loc_type](sg, new_loc_data.obs_data) :
+                    loc_type_dict[loc_type](sg, new_loc_data.obs_data, beta)
 
-                prec_cumulative[i] += calc_prec(new_loc_data, loc_result)
-                # dj_cumulative[i] += calc_jaccard(g, new_g)
+                precs[i, t] = calc_prec(new_loc_data, loc_result)
             end
         end
         for (i, k) in enumerate(k_vec)
-            println(io, "$k,$(prec_cumulative[i]/N)")
+            prec = mean(precs[i, :])
+            err = std(precs[i, :]) / sqrt(N)
+            println(io, "$k,$prec,$err")
         end
     end
 end
@@ -73,10 +77,13 @@ function evaluate_original_to_file(
     @assert haskey(loc_type_dict, loc_type)
     path = "data/loc_$(String(graph_type))_$(loc_type)_r$(round(Int,r*100))_beta$(round(Int, beta*100)).csv"
     open(path, "w") do io
-        println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta,modify_type=$modify_type,dj=$dj")
+        println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta")
         println(io, "rank,precision")
         g = graph_type_dict[graph_type]()
-        for _ in 1:N
+        for t in 1:N
+            if t % round(Int, N / 10) == 0
+                println("$loc_type: Starting $t iteration")
+            end
             loc_data::LocData = propagate_SI!(g, r, beta)
             loc_result = loc_type == :pearson ?
                          loc_type_dict[loc_type](g, loc_data.obs_data) :
