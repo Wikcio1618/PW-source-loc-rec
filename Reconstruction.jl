@@ -67,58 +67,56 @@ end
 function get_RWR_scores(g::SimpleGraph; alpha=0.5)
     eps = 1e-6
     max_iter = 1000
-    scores = Dict{Tuple{Int,Int},Float64}()
     V = nv(g)
+
     adj_mat = adjacency_matrix(g, Float64)
-    _degs = degree(g)
-    _degs[_degs.==0] .= 1.0 # prevent division by 0 for isolated nodes
-    M_T = transpose(adj_mat ./ _degs)
-    p_vecs = Array{Float64,2}(undef, (V, V)) # p-ility of reaching node j from i
-    for v in vertices(g)
+    degs = degree(g)
+    degs[degs.==0] .= 1.0
+    M_T = adj_mat ./ degs'
+    scores = Dict{Tuple{Int,Int},Float64}()
+
+    for v in 1:V
         R = zeros(V)
         R[v] = 1 - alpha
-        p_curr::Vector{Float64} = zeros(V)
+        p_curr = zeros(V)
         for _ in 1:max_iter
-            p_t = alpha * (M_T * p_curr) .+ R
-            if norm(p_t .- p_curr) < eps
-                p_curr .= p_t
+            mul!(p_curr, M_T, p_curr)  # In-place multiplication: p_curr = M_T * p_curr
+            p_curr .*= alpha
+            p_curr .+= R
+
+            if norm(p_curr - R) < eps
                 break
             end
-            p_curr .= p_t
         end
-        p_vecs[v, :] .= p_curr
+        for u in (v+1):V
+            scores[(v, u)] = p_curr[u] + p_curr[v]
+        end
     end
-    for x in 1:V, y in (x+1):V
-        scores[(x, y)] = p_vecs[x, y] + p_vecs[y, x]
-    end
-
     return scores
 end
 
 function get_SRW_scores(g::SimpleGraph; lim=3)
-    scores = Dict{Tuple{Int,Int},Float64}()
     V = nv(g)
+    scores = Dict{Tuple{Int,Int},Float64}()
+
     adj_mat = adjacency_matrix(g, Float64)
     degs = degree(g)
-    degs[degs.==0] .= 1.0 # prevent division by 0 for isolated nodes
-    M_T = transpose(adj_mat ./ degs)
-    superposed_p_vecs = Array{Float64,2}(undef, (V, V)) # summed p-ilities of reaching node j from i in step 1,...,lim
-    for v in vertices(g)
-        p_curr::Vector{Float64} = zeros(V)
+    degs[degs.==0] .= 1.0  # Prevent division by 0
+    M_T = adj_mat ./ degs'
+
+    for v in 1:V
+        p_curr = zeros(V)
         p_curr[v] = 1
         superposition = zeros(V)
         for _ in 1:lim
-            p_curr = M_T * p_curr
-            superposition .+= p_curr
+            mul!(superposition, M_T, p_curr, 1.0, 1.0)  # superposition += M_T * p_curr
+            mul!(p_curr, M_T, p_curr)  # p_curr = M_T * p_curr
         end
-        superposed_p_vecs[v, :] .= superposition
-    end
-    for x in vertices(g), y in vertices(g)
-        if x != y
-            pair = (min(x, y), max(x, y))
-            scores[pair] = (degs[x] * superposed_p_vecs[x, y] + degs[y] * superposed_p_vecs[y, x])
+        for u in (v+1):V
+            scores[(v, u)] = degs[v] * superposition[u] + degs[u] * superposition[v]
         end
     end
+
     return scores
 end
 

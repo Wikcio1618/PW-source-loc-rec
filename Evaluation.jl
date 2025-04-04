@@ -33,7 +33,7 @@ function evaluate_reconstruct_to_file(
         precs = Array{Float64, 2}(undef, (length(k_vec), N))
         for t in 1:N
             if t % round(Int, N / 10) == 0
-                println("$reconstruct_type: Starting $t iteration")
+                println("$reconstruct_type, dj=$dj: Starting $t iteration")
             end
             loc_data::LocData = propagate_SI!(g, r, beta)
             sg, new_loc_data = modify_type_dict[modify_type](g, loc_data, dj)
