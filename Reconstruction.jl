@@ -45,6 +45,75 @@ function get_RA_scores(g::SimpleGraph)::Dict{Tuple{Int,Int},Float64}
     return scores
 end
 
+function get_RWR_scores(g::SimpleGraph; alpha=0.5)
+    eps = 1e-5
+    max_iter = 100
+    V = nv(g)
+
+    adj_mat = adjacency_matrix(g, Float64)
+    degs = degree(g)
+    degs[degs.==0] .= 1.0
+    M_T = adj_mat ./ degs'
+
+    all_p = Matrix{Float64}(undef, V, V)
+    p_curr = zeros(V)
+    p_t = similar(p_curr)
+    for v in 1:V
+        fill!(p_curr, 0.0)
+        R = zeros(V)
+        R[v] = 1 - alpha
+        p_curr = zeros(V)
+        for _ in 1:max_iter
+            mul!(p_t, M_T, p_curr)             # p_t = M_T * p_curr
+            @. p_t = alpha * p_t + R           # fused broadcast, avoids allocation
+            if norm(p_t .- p_curr) < eps
+                copy!(p_curr, p_t)
+                break
+            end
+            copy!(p_curr, p_t)
+        end
+        all_p[v, :] .= p_curr
+    end
+    scores = Dict{Tuple{Int,Int},Float64}()
+    for x in 1:V, y in (x+1):V
+        scores[(x, y)] = all_p[x, y] + all_p[y, x]
+    end
+
+    return scores
+end
+
+function get_SRW_scores(g::SimpleGraph; lim=3)
+    V = nv(g)
+    scores = Dict{Tuple{Int,Int},Float64}()
+
+    adj_mat = adjacency_matrix(g, Float64)
+    degs = degree(g)
+    degs[degs.==0] .= 1.0
+    M_T = adj_mat ./ degs'
+
+    # Store superposed probabilities: each row i contains superposition from node i
+    all_superpositions = zeros(V, V)
+    p_curr = zeros(V)
+    p_t = similar(p_curr)
+    for v in 1:V
+        fill!(p_curr, 0.0)
+        p_curr[v] = 1.0
+        superposition = zeros(V)
+        for _ in 1:lim
+            mul!(p_t, M_T, p_curr)
+            superposition .+= p_t
+            copy!(p_curr, p_t)
+        end
+        all_superpositions[v, :] .= superposition
+    end
+
+    for x in 1:V, y in (x+1):V
+        scores[(x, y)] = degs[x] * all_superpositions[x, y] + degs[y] * all_superpositions[y, x]
+    end
+
+    return scores
+end
+
 function get_CN_scores(g::SimpleGraph)::Dict{Tuple{Int,Int},Float64}
     scores = Dict{Tuple{Int,Int},Float64}()
 
@@ -61,62 +130,6 @@ function get_CN_scores(g::SimpleGraph)::Dict{Tuple{Int,Int},Float64}
             end
         end
     end
-    return scores
-end
-
-function get_RWR_scores(g::SimpleGraph; alpha=0.5)
-    eps = 1e-6
-    max_iter = 1000
-    V = nv(g)
-
-    adj_mat = adjacency_matrix(g, Float64)
-    degs = degree(g)
-    degs[degs.==0] .= 1.0
-    M_T = adj_mat ./ degs'
-    scores = Dict{Tuple{Int,Int},Float64}()
-
-    for v in 1:V
-        R = zeros(V)
-        R[v] = 1 - alpha
-        p_curr = zeros(V)
-        for _ in 1:max_iter
-            mul!(p_curr, M_T, p_curr)  # In-place multiplication: p_curr = M_T * p_curr
-            p_curr .*= alpha
-            p_curr .+= R
-
-            if norm(p_curr - R) < eps
-                break
-            end
-        end
-        for u in (v+1):V
-            scores[(v, u)] = p_curr[u] + p_curr[v]
-        end
-    end
-    return scores
-end
-
-function get_SRW_scores(g::SimpleGraph; lim=3)
-    V = nv(g)
-    scores = Dict{Tuple{Int,Int},Float64}()
-
-    adj_mat = adjacency_matrix(g, Float64)
-    degs = degree(g)
-    degs[degs.==0] .= 1.0  # Prevent division by 0
-    M_T = adj_mat ./ degs'
-
-    for v in 1:V
-        p_curr = zeros(V)
-        p_curr[v] = 1
-        superposition = zeros(V)
-        for _ in 1:lim
-            mul!(superposition, M_T, p_curr, 1.0, 1.0)  # superposition += M_T * p_curr
-            mul!(p_curr, M_T, p_curr)  # p_curr = M_T * p_curr
-        end
-        for u in (v+1):V
-            scores[(v, u)] = degs[v] * superposition[u] + degs[u] * superposition[v]
-        end
-    end
-
     return scores
 end
 
