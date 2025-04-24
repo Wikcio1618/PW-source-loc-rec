@@ -7,19 +7,19 @@ using Graphs
 
 println(nthreads())
 
-N = 10^3 
-graph_type = :fb
-V = nv(graph_type_dict[graph_type]())
+N = 5*10^2
+graph_type = :email
+E = ne(graph_type_dict[graph_type]())
 beta = 0.95
 r = 0.3
 loc_type = :pearson
 modify_type = :hide
-reconstruct_type_list = [:ra, :rwr, :srw]
+reconstruct_type_list = [:ra, :srw]
 dj_list = [0.1, 0.2, 0.3, 0.4]
 # k_vec = 0:250:1000
 
 @threads for dj in dj_list
-    k_vec = [round(Int, n * dj * V) for n in [0, 1, 2]]
+    k_vec = [round(Int, n * dj * E) for n in [0, 0.5, 1, 2]]
     for rec_type in reconstruct_type_list
         evaluate_reconstruct_to_file(graph_type, loc_type, beta, r, N, modify_type, dj, rec_type, k_vec)
     end

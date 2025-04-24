@@ -38,9 +38,8 @@ function get_CAL_graph()::SimpleGraph
     return read_net_file("networks/california.net")
 end
 
-
 function get_INF_graph()::SimpleGraph
-    return read_gml_file("networks/inf_edges.gml")
+    return read_edges_file("networks/inf_edges.txt")
 end
 
 function get_EMAIL_graph()::SimpleGraph
@@ -67,6 +66,8 @@ function read_net_file(path)::SimpleGraph
                 add_edge!(g, u, v)
             end
         end
+
+        preprocess_graph!(g)
         return g
     end
 end
@@ -96,6 +97,8 @@ function read_edges_file(path::String)::SimpleGraph
         for (u, v) in edges
             add_edge!(g, unq_dict[u], unq_dict[v])
         end
+
+        preprocess_graph!(g)
         return g
     end
 end
@@ -138,7 +141,17 @@ function read_gml_file(file_path)::SimpleGraph
         add_edge!(g, node_map[src], node_map[dst])
     end
 
+    preprocess_graph!(g)
     return g
+end
+
+"""
+Remove isolated nodes, make it undirected, remove self loops, duplicated links
+"""
+function preprocess_graph!(g::SimpleGraph)
+    components = connected_components(g)
+    largest_component = argmax(map(length, components))
+    g, _ = induced_subgraph(g, components[largest_component])
 end
 
 
