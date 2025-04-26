@@ -46,6 +46,10 @@ function get_EMAIL_graph()::SimpleGraph
     return read_edges_file("networks/email.txt")
 end
 
+function get_CEL_graph()::SimpleGraph
+    return read_edges_file("networks/cel_edges.txt")
+end
+
 function read_net_file(path)::SimpleGraph
     open(path, "r") do io
         lines = readlines(io)
@@ -80,7 +84,9 @@ function read_edges_file(path::String)::SimpleGraph
         unq = 1
 
         for line in lines
-            u, v = [parse(Int, num) for num in split(line, [',', ' '])]
+            line_vals = [parse(Int, num) for num in split(line, [',', ' '])]
+            u = line_vals[1]
+            v = line_vals[2]
             if !haskey(unq_dict, u)
                 unq_dict[u] = unq
                 unq += 1
@@ -163,5 +169,6 @@ const graph_type_dict = Dict(
     :inf => get_INF_graph,
     :yst => get_YST_graph,
     :email => get_EMAIL_graph,
-    :cal => get_CAL_graph
+    :cal => get_CAL_graph,
+    :cel => get_CEL_graph
 )

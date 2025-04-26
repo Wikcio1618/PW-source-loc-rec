@@ -159,63 +159,58 @@ end
 
 
 # LINK PREDICTION
-function calc_prec_link_pred(graph_type::Symbol, pred_type::Symbol; k=5)
+function calc_prec_link_pred(graph_type::Symbol, pred_type::Symbol; num_folds=5)
     @assert haskey(graph_type_dict, graph_type)
     @assert haskey(score_type_dict, pred_type)
 
     g = graph_type_dict[graph_type]()
-    edges = collect(edges(g))
-    total_edges = length(edges)
-    fold_size = div(total_edges, k)
+    edges_list = collect(edges(g)) # E
+    shuffle!(edges_list)
+    fold_size = div(length(edges_list), num_folds)
 
-    shuffle!(edges)
+    prec_list = Float64[]
 
-    for fold in 1:k
-        # Determine test and training edges
-        # test_start = (fold - 1) * fold_size + 1
-        # test_end = min(fold * fold_size, total_edges)
-        # test_edges = shuffled_edges[test_start:test_end]
-        # train_edges = setdiff(shuffled_edges, test_edges)
-
-        # # Create training graph
-        # train_g = SimpleGraph(nv(g))
-        # for (u, v) in train_edges
-        #     add_edge!(train_g, u, v)
-        # end
-
-        # # Generate scores using the selected prediction method
-        # min_heap, max_heap = score_type_dict[pred_type](train_g)
-
-        # # Sort predictions by descending score
-        # predicted_links = collect(keys(max_heap))
-        # sort!(predicted_links, by=x -> max_heap[x], rev=true)
-
-        # # Compute precision: fraction of correctly predicted links in top-k
-        # test_set = Set(test_edges)
-        # top_k_predictions = predicted_links[1:min(k, length(predicted_links))]
-        # correct_predictions = count(x -> x in test_set, top_k_predictions)
-        # push!(precisions, correct_predictions / k)
+    for i in 1:num_folds
+        eval_pairs = Set(edge2pair(edge) for edge in edges_list[1+fold_size*(i-1):fold_size*i]) # E_V
+        train_pairs = Set(edge2pair(edge) for edge in edges_list if edge2pair(edge) ∉ eval_pairs) # E_T
+        train_graph = SimpleGraph(nv(g))
+        for pair in collect(train_pairs)
+            add_edge!(train_graph, pair...)
+        end
+        scores_heap = PriorityQueue(Base.Order.Reverse, score_type_dict[pred_type](train_graph))
+        TP = 0
+        k = 0
+        while k < fold_size && !isempty(scores_heap) # |E_O| = |E_V|
+            pair = dequeue!(scores_heap)
+            if pair ∈ train_pairs
+                continue
+            end
+            k += 1
+            if pair ∈ eval_pairs
+                TP += 1
+            end
+        end
+        append!(prec_list, TP / k)
     end
 
-    return mean(precisions)
+    return prec_list
 end
 
-function calc_auc_link_pred(graph_type::Symbol, pred_type::Symbol; k=5)::Float64
+function calc_auc_link_pred(graph_type::Symbol, pred_type::Symbol; num_folds=5)::Float64
     @assert haskey(graph_type_dict, graph_type)
     @assert haskey(score_type_dict, pred_type)
 
     g = graph_type_dict[graph_type]()
-    edges_list = collect(edges(g))
+    edges_list = collect(edges(g)) # E
     shuffle!(edges_list)
-    fold_size = div(length(edges_list), k)
-    # edges_list = edges_list[begin:fold_size*k]
-    nonexistent_pairs = Set((u, v) for u in vertices(g), v in vertices(g) if (!has_edge(g, u, v) && u < v))
+    fold_size = div(length(edges_list), num_folds)
+    nonexistent_pairs = Set((u, v) for u in vertices(g), v in vertices(g) if (!has_edge(g, u, v) && u < v)) # U - E
 
     auc_list = Float64[]
 
-    for i in 1:k
-        eval_edges = Set(edges_list[1+fold_size*(i-1):fold_size*i])
-        train_edges = [edge for edge in edges_list if edge ∉ eval_edges]
+    for i in 1:num_folds
+        eval_edges = Set(edges_list[1+fold_size*(i-1):fold_size*i]) # E_V
+        train_edges = [edge for edge in edges_list if edge ∉ eval_edges] # # E_T
         train_graph = SimpleGraph(nv(g))
         for edge in train_edges
             add_edge!(train_graph, edge)
@@ -224,9 +219,8 @@ function calc_auc_link_pred(graph_type::Symbol, pred_type::Symbol; k=5)::Float64
 
         # AUC = (n' + 0.5n'') / n - all samples, samples that result in higher score for correct prediction, sample that result in a draw
         auc_nominator = 0
-        e2t = (e) -> (min(src(e), dst(e)), max(src(e), dst(e)))
         for _ in 1:10^6
-            missing_score = get(scores, e2t(rand(eval_edges)), 0)
+            missing_score = get(scores, edge2pair(rand(eval_edges)), 0)
             nonexistent_score = get(scores, rand(nonexistent_pairs), 0)
             if missing_score > nonexistent_score
                 auc_nominator += 1
@@ -238,4 +232,11 @@ function calc_auc_link_pred(graph_type::Symbol, pred_type::Symbol; k=5)::Float64
     end
 
     return mean(auc_list)
+end
+
+function edge2pair(edge::Edge)
+    return (
+        min(src(edge), dst(edge)),
+        max(src(edge), dst(edge))
+    )
 end

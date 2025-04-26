@@ -36,7 +36,7 @@ function get_RA_scores(g::SimpleGraph)::Dict{Tuple{Int,Int},Float64}
                 x, y = neis[i], neis[j]
                 pair = (min(x, y), max(x, y))
                 if !haskey(scores, pair)
-                    ra_score = sum(i -> 1/degree(g, i), intersect(neighbors(g, x), neighbors(g, y)))
+                    ra_score = sum(i -> 1 / degree(g, i), intersect(neighbors(g, x), neighbors(g, y)))
                     scores[pair] = ra_score
                 end
             end
@@ -58,9 +58,10 @@ function get_RWR_scores(g::SimpleGraph; alpha=0.5)
     all_p = Matrix{Float64}(undef, V, V)
     p_curr = zeros(V)
     p_t = similar(p_curr)
+    R = zeros(V)
     for v in 1:V
         fill!(p_curr, 0.0)
-        R = zeros(V)
+        fill!(R, 0.0)
         R[v] = 1 - alpha
         p_curr = zeros(V)
         for _ in 1:max_iter
