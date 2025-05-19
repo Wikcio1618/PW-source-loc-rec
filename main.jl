@@ -1,16 +1,15 @@
-using Revise
-includet("Evaluation.jl")
+include("Evaluation.jl")
 
-using Statistics
+# using Statistics
 using Plots
 using Base.Threads
 
-using DataFrames
-using CSV
+#using DataFrames
+#using CSV
 
-N = 10^1
-graph_type = :fb
-# println("Num of threads: $(nthreads())")
+N = 10^2
+graph_type = :email
+println("Num of threads: $(nthreads())")
 
 betas = [0.8]
 methods = [:lptva]
