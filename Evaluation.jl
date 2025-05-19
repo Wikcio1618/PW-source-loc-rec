@@ -74,7 +74,7 @@ function evaluate_original_to_file(
     beta::Float64,
     r::Float64,
     N::Int;
-    graph_args::Dict
+    graph_args=Dict()
 )
     @assert haskey(graph_type_dict, graph_type)
     @assert haskey(loc_type_dict, loc_type)
