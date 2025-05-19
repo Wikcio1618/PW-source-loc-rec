@@ -73,7 +73,8 @@ function evaluate_original_to_file(
     loc_type::Symbol,
     beta::Float64,
     r::Float64,
-    N::Int
+    N::Int;
+    graph_args::Dict
 )
     @assert haskey(graph_type_dict, graph_type)
     @assert haskey(loc_type_dict, loc_type)
@@ -81,7 +82,7 @@ function evaluate_original_to_file(
     open(path, "w") do io
         println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta")
         println(io, "rank,precision")
-        g = graph_type_dict[graph_type]()
+        g = graph_type_dict[graph_type](graph_args...)
         for t in 1:N
             if t % round(Int, N / 10) == 0
                 println("$loc_type: Starting $t iteration")
