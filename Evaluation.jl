@@ -1,8 +1,10 @@
+using Revise
+
 include("Localization.jl")
 include("Propagation.jl")
 include("GraphCreation.jl")
 include("Modification.jl")
-include("Reconstruction.jl")
+includet("Reconstruction.jl")
 
 using Graphs
 using Random
@@ -167,10 +169,12 @@ function calc_prec_link_pred(graph_type::Symbol, pred_type::Symbol; num_folds=5)
     edges_list = collect(edges(g)) # E
     shuffle!(edges_list)
     fold_size = div(length(edges_list), num_folds)
+    println(fold_size)
 
-    prec_list = Float64[]
+    res = Vector(undef, num_folds)
 
     for i in 1:num_folds
+        prec_list = []
         eval_pairs = Set(edge2pair(edge) for edge in edges_list[1+fold_size*(i-1):fold_size*i]) # E_V
         train_pairs = Set(edge2pair(edge) for edge in edges_list if edge2pair(edge) ∉ eval_pairs) # E_T
         train_graph = SimpleGraph(nv(g))
@@ -178,9 +182,11 @@ function calc_prec_link_pred(graph_type::Symbol, pred_type::Symbol; num_folds=5)
             add_edge!(train_graph, pair...)
         end
         scores_heap = PriorityQueue(Base.Order.Reverse, score_type_dict[pred_type](train_graph))
+        # return collect(values(score_type_dict[pred_type](train_graph)))
+        # println(sort(collect(scores_heap), by=x->x[2], order=Base.Reverse)[1:200])
         TP = 0
         k = 0
-        while k < fold_size && !isempty(scores_heap) # |E_O| = |E_V|
+        while k < 5*fold_size && !isempty(scores_heap) # |E_O| = |E_V|
             pair = dequeue!(scores_heap)
             if pair ∈ train_pairs
                 continue
@@ -189,11 +195,13 @@ function calc_prec_link_pred(graph_type::Symbol, pred_type::Symbol; num_folds=5)
             if pair ∈ eval_pairs
                 TP += 1
             end
+            append!(prec_list, TP / k)
         end
-        append!(prec_list, TP / k)
+        res[i] = prec_list
+        # append!(res, TP / fold_size)
     end
 
-    return prec_list
+    return res
 end
 
 function calc_auc_link_pred(graph_type::Symbol, pred_type::Symbol; num_folds=5)::Float64
