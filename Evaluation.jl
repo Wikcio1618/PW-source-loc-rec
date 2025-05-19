@@ -86,6 +86,9 @@ function evaluate_original_to_file(
     output = Vector{String}(undef, N)
 
     @threads for t in 1:N
+        if t % (div(N , 10)) == 0
+            println("Starting $t iteration")
+        end
         g_copy = deepcopy(g)
         loc_data = propagate_SI!(g_copy, r, beta)
         loc_result = loc_type == :pearson ?
