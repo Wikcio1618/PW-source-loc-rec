@@ -1,4 +1,5 @@
 using Revise
+using Base.Threads
 
 include("Localization.jl")
 include("Propagation.jl")
@@ -9,6 +10,7 @@ includet("Reconstruction.jl")
 using Graphs
 using Random
 using DataStructures
+
 
 function evaluate_reconstruct_to_file(
     graph_type::Symbol,
@@ -78,22 +80,28 @@ function evaluate_original_to_file(
 )
     @assert haskey(graph_type_dict, graph_type)
     @assert haskey(loc_type_dict, loc_type)
+
     path = "data/loc_$(String(graph_type))_$(loc_type)_r$(round(Int,r*100))_beta$(round(Int, beta*100)).csv"
+    g = graph_type_dict[graph_type](graph_args...)
+    output = Vector{String}(undef, N)
+
+    @threads for t in 1:N
+        g_copy = deepcopy(g)
+        loc_data = propagate_SI!(g_copy, r, beta)
+        loc_result = loc_type == :pearson ?
+                     loc_type_dict[loc_type](g_copy, loc_data.obs_data) :
+                     loc_type_dict[loc_type](g_copy, loc_data.obs_data, beta)
+
+        rank = calc_rank(loc_data, loc_result, nv(g_copy))
+        prec = calc_prec(loc_data, loc_result)
+        output[t] = "$rank,$prec"
+    end
+
     open(path, "w") do io
         println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta")
         println(io, "rank,precision")
-        g = graph_type_dict[graph_type](graph_args...)
-        for t in 1:N
-            if t % round(Int, N / 10) == 0
-                println("$loc_type: Starting $t iteration")
-            end
-            loc_data::LocData = propagate_SI!(g, r, beta)
-            loc_result = loc_type == :pearson ?
-                         loc_type_dict[loc_type](g, loc_data.obs_data) :
-                         loc_type_dict[loc_type](g, loc_data.obs_data, beta)
-            rank = calc_rank(loc_data, loc_result, nv(g))
-            prec = calc_prec(loc_data, loc_result)
-            println(io, "$rank,$prec")
+        for row in output
+            println(io, row)
         end
     end
 end
