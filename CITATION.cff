@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "PW-source-loc-rec"
+version: "1.0.0"
+date-released: 2025-05-09
+repository-code: "https://github.com/Wikcio1618/PW-source-loc-rec"
+authors:
+  - family-names: "Ciołek"
+    given-names: "Wiktor"
+    affiliation: "Warsaw University of Technology"
+keywords:
+  - source localisation
+  - complex networks
+  - information spread
+  - network science
+  - network reconstruction
