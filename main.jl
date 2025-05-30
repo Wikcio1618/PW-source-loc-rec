@@ -2,19 +2,16 @@ include("Evaluation.jl")
 
 # using Statistics
 using Plots
-using Base.Threads
 
-#using DataFrames
-#using CSV
-
-N = 10^2
+N = 10^3
 graph_type = :email
 println("Num of threads: $(nthreads())")
 
-betas = [0.2]
+betas = [0.2, 0.5, 0.8]
 methods = [:lptva]
 R = [0.05, 0.1, 0.15, 0.2, 0.25]
- 
+
+start = time()
 for beta in betas
     for method in methods
         for r in R
@@ -22,6 +19,7 @@ for beta in betas
         end
     end
 end
+println("program run for $(time()-start)")
 
 
 # graph_type_list = [:cel, :inf, :usa]
