@@ -7,14 +7,14 @@ using Base.Threads
 #using DataFrames
 #using CSV
 
-N = 10^4
+N = 10^2
 graph_type = :email
 println("Num of threads: $(nthreads())")
 
 betas = [0.2]
 methods = [:lptva]
 R = [0.05, 0.1, 0.15, 0.2, 0.25]
-
+ 
 for beta in betas
     for method in methods
         for r in R
