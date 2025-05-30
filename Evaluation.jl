@@ -89,7 +89,7 @@ function evaluate_original_to_file(
         if (t - 1) % (div(N, 4)) == 0
             println("Starting $(t-1) iteration of beta=$beta r=$r")
         end
-        g_copy = deepcopy(g)
+        g_copy = copy(g)
         loc_data = propagate_SI!(g_copy, r, beta)
         loc_result = loc_type == :pearson ?
                      loc_type_dict[loc_type](g_copy, loc_data.obs_data) :
