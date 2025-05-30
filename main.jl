@@ -1,23 +1,18 @@
-include("Evaluation.jl")
+using Distributed
 
-# using Statistics
-using Plots
 
-N = 10^3
+
+N = 128*4
 graph_type = :email
-println("Num of threads: $(nthreads())")
 
 betas = [0.2, 0.5, 0.8]
-methods = [:lptva]
+methods = [:pearson]
 R = [0.05, 0.1, 0.15, 0.2, 0.25]
-
+addprocs(length(R) * length(betas) - 1)
+@everywhere include("Evaluation.jl")
 start = time()
-for beta in betas
-    for method in methods
-        for r in R
-            evaluate_original_to_file(graph_type, method, beta, r, N)
-        end
-    end
+for method in methods
+    pmap(param -> evaluate_original_to_file(graph_type, method, param[2], param[1], N), Iterators.product(R, betas))
 end
 println("program run for $(time()-start)")
 
