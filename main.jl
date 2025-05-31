@@ -1,7 +1,6 @@
 using Distributed
 
 
-
 N = 128*4
 graph_type = :email
 
