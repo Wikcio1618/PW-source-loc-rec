@@ -10,6 +10,7 @@ includet("Reconstruction.jl")
 using Graphs
 using Random
 using DataStructures
+using Base.Threads
 
 
 function evaluate_reconstruct_to_file(
@@ -80,11 +81,11 @@ function evaluate_original_to_file(
 )
     @assert haskey(graph_type_dict, graph_type)
     @assert haskey(loc_type_dict, loc_type)
-    println("My PID is $(myid())")
     path = "data/loc_$(String(graph_type))_$(loc_type)_r$(round(Int,r*100))_beta$(round(Int, beta*100)).csv"
-    g = graph_type_dict[graph_type](graph_args...)
+    g = graph_type_dict[graph_type](;graph_args...)
     output = Vector{String}(undef, N)
 
+    # println("Have $(nthreads()) threads\nAvailable: $(Sys.CPU_THREADS)")
     for t in 1:N
         if (t - 1) % (div(N, 4)) == 0
             println("Starting $(t-1) iteration of beta=$beta r=$r")
