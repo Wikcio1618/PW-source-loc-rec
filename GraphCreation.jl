@@ -35,7 +35,7 @@ function get_USA_graph()::SimpleGraph
 end
 
 function get_CAL_graph()::SimpleGraph
-    return read_net_file("networks/california.net")
+    return read_edges_file("networks/california.net")
 end
 
 function get_INF_graph()::SimpleGraph
