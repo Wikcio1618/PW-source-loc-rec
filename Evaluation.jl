@@ -68,6 +68,7 @@ function evaluate_reconstruct_to_file(
             println(io, "$k,$prec,$err")
         end
     end
+    println("Finished writing to $path")
 end
 
 
