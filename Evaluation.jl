@@ -30,6 +30,7 @@ function evaluate_reconstruct_to_file(
     @assert haskey(score_type_dict, reconstruct_type)
 
     path = "data/rec_$(String(reconstruct_type))_dj$(round(Int, dj*100))_$(String(graph_type))_$(loc_type)_r$(round(Int,r*100))_beta$(round(Int, beta*100)).csv"
+    println(k_vec)
 
     open(path, "w") do io
         println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta,modify_type=$modify_type,dj=$dj,reconstruct_type=$reconstruct_type")
@@ -37,7 +38,7 @@ function evaluate_reconstruct_to_file(
         g = graph_type_dict[graph_type]()
         precs = Array{Float64,2}(undef, (length(k_vec), N))
         for t in 1:N
-            if (t - 1) % (div(N, 4)) == 0
+            if (t - 1) % div(N, 4) == 0
                 println("$(String(loc_type)), $(String(reconstruct_type)), dj=$dj: Starting $(t-1) iteration")
             end
             loc_data::LocData = propagate_SI!(g, r, beta)
