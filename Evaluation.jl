@@ -32,7 +32,7 @@ function evaluate_reconstruct_to_file(
     path = "data/rec_$(String(reconstruct_type))_dj$(round(Int, dj*100))_$(String(graph_type))_$(loc_type)_r$(round(Int,r*100))_beta$(round(Int, beta*100)).csv"
     println(k_vec)
 
-    open(path, "w") do io
+    open(path, "a") do io
         println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta,modify_type=$modify_type,dj=$dj,reconstruct_type=$reconstruct_type")
         println(io, "k,prec,std_err")
         g = graph_type_dict[graph_type]()
