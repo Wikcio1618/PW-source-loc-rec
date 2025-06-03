@@ -9,7 +9,7 @@ beta = 0.95
 r = 0.1
 modify_type = :hide
 
-methods = [:gmla]
+methods = [:pearson]
 reconstruct_type_list = [:srw]
 # dj_list = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
 dj_list = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
