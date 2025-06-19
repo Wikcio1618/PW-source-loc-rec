@@ -15,7 +15,7 @@ function pearson_loc(g::SimpleGraph, obs_data::Dict{Int,Int})::Vector{Tuple{Int6
     # Compute distances from each observer once
     D = Matrix{Float64}(undef, O, V)
     for (i, obs) in enumerate(obs_idxs)
-        dists = get_path_lengths(g, obs, vertices(g))  # returns Dict{Int,Int} or similar
+        dists = get_path_lengths(g, obs, Set(vertices(g)))  # returns Dict{Int,Int} or similar
         for v in 1:V
             D[i, v] = get(dists, v, Inf)  # assign Inf if unreachable
         end

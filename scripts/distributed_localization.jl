@@ -8,9 +8,9 @@ graph_args = Dict(
     :k => 4
 )
 
-betas = [0.2, 0.5, 0.8]
-methods = [:lptva]
-R = [0.05, 0.1, 0.15, 0.2, 0.25]
+betas = [0.8]
+methods = [:pearson]
+R = [0.1, 0.15, 0.2]
 
 addprocs(length(R) * length(betas))
 @everywhere include("../Evaluation.jl")

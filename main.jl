@@ -1,26 +1,4 @@
 
-using Statistics
-using Plots
-using Base.Threads
-
-using DataFrames
-using CSV
-
-N = 10^3
-graph_type = :cal
-println("Num of threads: $(nthreads())")
-
-betas = [0.2, 0.5, 0.8]
-methods = [:lptva]
-R = [0.05, 0.1, 0.15, 0.2, 0.25]
-
-for beta in betas
-    for method in methods
-        @threads for r in R
-            evaluate_original_to_file(graph_type, method, beta, r, N)
-        end
-    end
-end
 
 
 # graph_type_list = [:cel, :inf, :usa]
