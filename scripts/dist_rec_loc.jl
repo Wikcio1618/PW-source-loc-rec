@@ -2,9 +2,14 @@ using Distributed
 using Graphs
 include("../GraphCreation.jl")
 
-N = 10^1
-graph_type = :email
-E = ne(graph_type_dict[graph_type]())
+N = 10^3
+graph_type = :ba
+graph_args = Dict(
+    :V => 100,
+    :n0 => 4,
+    :k => 4
+)
+E = ne(graph_type_dict[graph_type](; graph_args...))
 beta = 0.95
 r = 0.1
 modify_type = :hide
@@ -30,7 +35,9 @@ pmap(
 			modify_type,
 			dj,
 			rec_type,
-			dj == 0.0 ? [0] : [round(Int, n * dj * E) for n in [3, 5, 8]])
+			dj == 0.0 ? [0] : [round(Int, n * dj * E) for n in [0, 1, 2]],
+			;graph_args = graph_args
+		)
 	end,
 	Iterators.product(dj_list, reconstruct_type_list, methods),
 )

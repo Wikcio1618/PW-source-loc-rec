@@ -38,7 +38,6 @@ function get_BRUTE_PEARSON_scores(g::SimpleGraph, S0=missing; obs_data::Dict{Int
     if ismissing(S0)
         S0 = sqrt(V)
     end
-    scores = Dict{Tuple{Int,Int},Float64}()
 
     # Create dictionary mapping each tester_node to its base pearson correlation
     base_tester_scores = Dict{Int,Float64}()
@@ -50,6 +49,7 @@ function get_BRUTE_PEARSON_scores(g::SimpleGraph, S0=missing; obs_data::Dict{Int
     end
 
     # calculate score for each non-observed link
+    scores = Dict{Tuple{Int,Int},Float64}()
     for i in 1:V, j in i+1:V
         if has_edge(g, i, j)
             continue
@@ -61,6 +61,7 @@ function get_BRUTE_PEARSON_scores(g::SimpleGraph, S0=missing; obs_data::Dict{Int
             max_increase = increase > max_increase ? increase : max_increase
         end
         scores[(i, j)] = max_increase
+        rem_edge!(g, i, j)
     end
 
     return scores
