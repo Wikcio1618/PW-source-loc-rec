@@ -51,17 +51,18 @@ function get_BRUTE_PEARSON_scores(g::SimpleGraph, S0=missing; obs_data::Dict{Int
     # calculate score for each non-observed link
     scores = Dict{Tuple{Int,Int},Float64}()
     for i in 1:V, j in i+1:V
-        if has_edge(g, i, j)
+        g_temp = copy(g)
+        if has_edge(g_temp, i, j)
             continue
         end
-        add_edge!(g, i, j)
+        add_edge!(g_temp, i, j)
         max_increase = -Inf
         for (tester, base_score) in base_tester_scores
-            increase = abs(single_node_pearson_score(g, tester, obs_data)) - abs(base_score)
+            increase = abs(single_node_pearson_score(g_temp, tester, obs_data)) - abs(base_score)
             max_increase = increase > max_increase ? increase : max_increase
         end
         scores[(i, j)] = max_increase
-        rem_edge!(g, i, j)
+        rem_edge!(g_temp, i, j) 
     end
 
     return scores
