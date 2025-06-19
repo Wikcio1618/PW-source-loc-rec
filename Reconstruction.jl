@@ -34,25 +34,34 @@ Final score for a given link is taken as maximum pearson correlation increase ov
 """
 function get_BRUTE_PEARSON_scores(g::SimpleGraph, S0=missing; obs_data::Dict{Int,Int})::Dict{Tuple{Int,Int},Float64}
     V = nv(g)
-    @assert S0 <= V
+    @assert ismissing(S0) || S0 <= V
     if ismissing(S0)
         S0 = sqrt(V)
     end
     scores = Dict{Tuple{Int,Int},Float64}()
 
     # Create dictionary mapping each tester_node to its base pearson correlation
-    base_pearson = Dict{Int, Float64}()
-    while length(base_pearson) < S0
+    base_tester_scores = Dict{Int,Float64}()
+    while length(base_tester_scores) < S0
         rnd = rand(1:V)
-        if !in(rnd, tester_nodes)
-            base_pearson[rnd] = pea
+        if !haskey(base_tester_scores, rnd)
+            base_tester_scores[rnd] = single_node_pearson_score(g, rnd, obs_data)
         end
     end
 
-    # Calculate pearson for each tester node
-
-
-
+    # calculate score for each non-observed link
+    for i in 1:V, j in i+1:V
+        if has_edge(g, i, j)
+            continue
+        end
+        add_edge!(g, i, j)
+        max_increase = -Inf
+        for (tester, base_score) in base_tester_scores
+            increase = abs(single_node_pearson_score(g, tester, obs_data)) - abs(base_score)
+            max_increase = increase > max_increase ? increase : max_increase
+        end
+        scores[(i, j)] = max_increase
+    end
 
     return scores
 end
@@ -287,7 +296,8 @@ const score_type_dict = Dict(
     :rwr => get_RWR_scores,
     :fp => get_FP_scores,
     :srw => get_SRW_scores,
-    :merw => get_MERW_scores
+    :merw => get_MERW_scores,
+    :bp => get_BRUTE_PEARSON_scores
 )
 
 """
