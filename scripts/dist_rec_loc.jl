@@ -10,7 +10,7 @@ r = 0.1
 modify_type = :hide
 
 methods = [:pearson]
-reconstruct_type_list = [:srw]
+reconstruct_type_list = [:bp]
 # dj_list = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
 dj_list = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
 

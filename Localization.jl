@@ -36,6 +36,17 @@ function pearson_loc(g::SimpleGraph, obs_data::Dict{Int,Int})::Vector{Tuple{Int6
     return pairs
 end
 
+"""
+**Needed by Brute Pearson reconstruction algorithm**\n
+Calculate pearson score for a single suspect `node` given graph `g` and observer data `obs_data`.\n
+This func is not used in `pearson_loc` bcs it is more optimal to calculate paths by traversing the graph O times rather than V times
+"""
+function single_node_pearson_score(g::SimpleGraph, node::Int, obs_data::Dict{Int,Int})::Float64
+    path_lengths = get_path_lengths(g, node, Set(keys(obs_data)))
+    dists = collect(values(path_lengths))
+    times = [obs_data[obs] for obs in collect(keys(path_lengths))]
+    score = Statistics.cor(dists, times)
+end
 
 function LPTVA_loc(g::SimpleGraph, obs_data::Dict{Int,Int}, beta)::Vector{Tuple{Int64,Float64}}
     pairs = sort(collect(zip(keys(obs_data), values(obs_data))), by=x -> x[2])

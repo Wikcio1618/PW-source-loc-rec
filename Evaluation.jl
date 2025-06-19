@@ -42,9 +42,13 @@ function evaluate_reconstruct_to_file(
             end
             loc_data::LocData = propagate_SI!(g, r, beta)
             sg, new_loc_data = modify_type_dict[modify_type](g, loc_data, dj)
+            score_args =
+                reconstruct_type == :bp ?
+                Dict(:obs_data => new_loc_data.obs_data) :
+                Dict()
             heap = PriorityQueue(
                 modify_type == :hide ? Base.Order.Reverse : Base.Order.Forward,
-                score_type_dict[reconstruct_type](sg)
+                score_type_dict[reconstruct_type](sg; score_args...)
             )
             for i in eachindex(k_vec)
                 reconstruct_top_k!(
@@ -83,7 +87,7 @@ function evaluate_original_to_file(
     @assert haskey(graph_type_dict, graph_type)
     @assert haskey(loc_type_dict, loc_type)
     path = "data/loc_$(String(graph_type))_$(loc_type)_r$(round(Int,r*100))_beta$(round(Int, beta*100)).csv"
-    g = graph_type_dict[graph_type](;graph_args...)
+    g = graph_type_dict[graph_type](; graph_args...)
     output = Vector{String}(undef, N)
 
     # println("Have $(nthreads()) threads\nAvailable: $(Sys.CPU_THREADS)")
@@ -201,7 +205,7 @@ function calc_prec_link_pred(graph_type::Symbol, pred_type::Symbol; num_folds=5)
         # println(sort(collect(scores_heap), by=x->x[2], order=Base.Reverse)[1:200])
         TP = 0
         k = 0
-        while k < 5*fold_size && !isempty(scores_heap) # |E_O| = |E_V|
+        while k < 5 * fold_size && !isempty(scores_heap) # |E_O| = |E_V|
             pair = dequeue!(scores_heap)
             if pair ∈ train_pairs
                 continue
