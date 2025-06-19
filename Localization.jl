@@ -2,7 +2,7 @@ using Graphs
 using Statistics
 using LinearAlgebra
 using Base.Threads
-
+using DataStructures
 
 # Each and every one of 3 localization methods returns pairs of (node_idx, score) sorted by score
 
@@ -11,6 +11,18 @@ function pearson_loc(g::SimpleGraph, obs_data::Dict{Int,Int})::Vector{Tuple{Int6
     O = length(obs_data)
     obs_idxs = collect(keys(obs_data))
     obs_times = collect(values(obs_data))
+
+    pairs = Vector{Tuple{Int64,Float64}}()
+    for s in 1:V
+        path_lengths = get_path_lengths(g, s, obs_idxs)
+        dists = [path_lengths[v] for v in obs_idxs]
+        corr = Statistics.cor(obs_times, dists)
+        push!(pairs, (s, corr))
+    end
+
+    sort!(pairs, by=x -> x[2], rev=true)
+
+    return pairs
 
     # 2d array - each row is distances from every observer
     LENS = Array{Int,2}(undef, O, V)
@@ -131,6 +143,35 @@ function calculate_phi_score(graph::SimpleGraph, s::Int, t_prim::Vector{Int}, ob
 end
 
 """
+Given node `src` and graph `g` returns a dictionary mapping index of each node from `targets` to the length of the path connecting them
+"""
+function get_path_lengths(g::SimpleGraph, src::Int, targets::Set{Int})::Dict{Int,Int}
+    path_lengths = Dict{Int,Int}()
+
+    queue = [src]
+    visited = Set([src])
+    curr_length = 0
+    while length(path_lengths) < length(targets) && length(visited) - length(queue) < nv(g)
+        next_queue = Int[]
+        for curr_node in queue
+            if curr_node ∈ targets
+                path_lengths[curr_node] = curr_length
+            end
+            for nei in neighbors(g, curr_node)
+                if nei ∉ visited
+                    push!(visited, nei)
+                    push!(next_queue, nei)
+                end
+            end
+        end
+        queue = next_queue
+        curr_length += 1
+    end
+
+    return path_lengths
+end
+
+"""
 Given node `target` and TREE graph `g` return dictionary mapping index of each target node in the graph to the vector of indexes defining a path from `nodes` to the `target`
 """
 function paths_to_target(tree::SimpleGraph, target::Int, nodes::Vector{Int})::Dict{Int,Vector{Int}}
@@ -146,7 +187,7 @@ function bfs_path(tree::SimpleGraph, src::Int, target::Int)::Vector{Int}
         return [target]
     end
 
-    queue = [(src, [src])] 
+    queue = [(src, [src])]
     visited = Set{Int}([src])
 
     while !isempty(queue)
