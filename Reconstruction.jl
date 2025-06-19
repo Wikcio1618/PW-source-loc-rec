@@ -3,6 +3,8 @@ using DataStructures
 using LinearAlgebra
 using SparseArrays
 
+include("Localization.jl")
+
 """
 Modifies the `heap` and modifies the graph depending on `inplace`
 """
@@ -25,6 +27,35 @@ function reconstruct_top_k!(g::SimpleGraph, heap::PriorityQueue, k::Int; type=:a
     return g_mod
 end
 
+""" 
+Calculates scores of each non-observed link by calculating how much its presence increases pearson correlation.\n
+New correlation is calculated for each of `S0` randomly selected `tester nodes`.\n
+Final score for a given link is taken as maximum pearson correlation increase over all S0 nodes.
+"""
+function get_BRUTE_PEARSON_scores(g::SimpleGraph, S0=missing; obs_data::Dict{Int,Int})::Dict{Tuple{Int,Int},Float64}
+    V = nv(g)
+    @assert S0 <= V
+    if ismissing(S0)
+        S0 = sqrt(V)
+    end
+    scores = Dict{Tuple{Int,Int},Float64}()
+
+    # Create dictionary mapping each tester_node to its base pearson correlation
+    base_pearson = Dict{Int, Float64}()
+    while length(base_pearson) < S0
+        rnd = rand(1:V)
+        if !in(rnd, tester_nodes)
+            base_pearson[rnd] = pea
+        end
+    end
+
+    # Calculate pearson for each tester node
+
+
+
+
+    return scores
+end
 
 function get_RA_scores(g::SimpleGraph)::Dict{Tuple{Int,Int},Float64}
     scores = Dict{Tuple{Int,Int},Float64}()
@@ -200,7 +231,7 @@ function get_MERW_scores(g::SimpleGraph; eps=1e-6, max_iter=1000)
 
     scores = Dict{Tuple{Int,Int},Float64}()
     for x in 1:V, y in (x+1):V
-        scores[(x, y)] = all_p[x, y] + all_p[y,x]
+        scores[(x, y)] = all_p[x, y] + all_p[y, x]
     end
 
     return scores
