@@ -11,7 +11,7 @@ function propagate_SI!(g::SimpleGraph, r::Float64, beta::Float64, t_max::Int=10^
     @assert 0.0 < beta < 1.0
     @assert 0.0 < r <= 1.0
     V::Int = nv(g)
-    t_start::Int = Random.rand(1:100) # arbitrary large number for possible start
+    t_start::Int = Random.rand(1:100) # arbitrarily large number for possible start
     obs_dict = Dict{Int, Int}()
     
     observer_set = Set(Random.randperm(V)[1:round(Int, r * V)])
