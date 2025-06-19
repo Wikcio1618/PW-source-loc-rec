@@ -2,29 +2,40 @@ using Graphs
 using Statistics
 using LinearAlgebra
 using Base.Threads
-
+using DataStructures
 
 # Each and every one of 3 localization methods returns pairs of (node_idx, score) sorted by score
 
 function pearson_loc(g::SimpleGraph, obs_data::Dict{Int,Int})::Vector{Tuple{Int64,Float64}}
     V = nv(g)
-    O = length(obs_data)
     obs_idxs = collect(keys(obs_data))
     obs_times = collect(values(obs_data))
+    O = length(obs_idxs)
 
-    # 2d array - each row is distances from every observer
-    LENS = Array{Int,2}(undef, O, V)
-    # for every observer
-    for (i, obs_idx) in enumerate(obs_idxs)
-        # TODO: use paths_from_node algortithm for speedup?
-        LENS[i, :] = dijkstra_shortest_paths(g, obs_idx).dists
+    # Compute distances from each observer once
+    D = Matrix{Float64}(undef, O, V)
+    for (i, obs) in enumerate(obs_idxs)
+        dists = get_path_lengths(g, obs, vertices(g))  # returns Dict{Int,Int} or similar
+        for v in 1:V
+            D[i, v] = get(dists, v, Inf)  # assign Inf if unreachable
+        end
     end
-    # for every node
-    covs = Dict{Int,Float64}(s => Statistics.cor(LENS[:, s], obs_times) for s in 1:V)
-    pairs = sort(collect(zip(keys(covs), values(covs))), by=x -> x[2], rev=true)
 
+    # Correlation between each column of D and obs_times
+    pairs = Vector{Tuple{Int64,Float64}}()
+    for s in 1:V
+        col = D[:, s]
+        if any(isinf.(col))
+            push!(pairs, (s, -Inf))
+        else
+            push!(pairs, (s, Statistics.cor(obs_times, col)))
+        end
+    end
+
+    sort!(pairs, by=x -> x[2], rev=true)
     return pairs
 end
+
 
 function LPTVA_loc(g::SimpleGraph, obs_data::Dict{Int,Int}, beta)::Vector{Tuple{Int64,Float64}}
     pairs = sort(collect(zip(keys(obs_data), values(obs_data))), by=x -> x[2])
@@ -131,6 +142,35 @@ function calculate_phi_score(graph::SimpleGraph, s::Int, t_prim::Vector{Int}, ob
 end
 
 """
+Given node `src` and graph `g` returns a dictionary mapping index of each node from `targets` to the length of the path connecting them
+"""
+function get_path_lengths(g::SimpleGraph, src::Int, targets::Set{Int})::Dict{Int,Int}
+    path_lengths = Dict{Int,Int}()
+
+    queue = [src]
+    visited = Set([src])
+    curr_length = 0
+    while length(path_lengths) < length(targets) && length(visited) - length(queue) < nv(g)
+        next_queue = Int[]
+        for curr_node in queue
+            if curr_node ∈ targets
+                path_lengths[curr_node] = curr_length
+            end
+            for nei in neighbors(g, curr_node)
+                if nei ∉ visited
+                    push!(visited, nei)
+                    push!(next_queue, nei)
+                end
+            end
+        end
+        queue = next_queue
+        curr_length += 1
+    end
+
+    return path_lengths
+end
+
+"""
 Given node `target` and TREE graph `g` return dictionary mapping index of each target node in the graph to the vector of indexes defining a path from `nodes` to the `target`
 """
 function paths_to_target(tree::SimpleGraph, target::Int, nodes::Vector{Int})::Dict{Int,Vector{Int}}
@@ -146,7 +186,7 @@ function bfs_path(tree::SimpleGraph, src::Int, target::Int)::Vector{Int}
         return [target]
     end
 
-    queue = [(src, [src])] 
+    queue = [(src, [src])]
     visited = Set{Int}([src])
 
     while !isempty(queue)

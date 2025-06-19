@@ -1,0 +1,3 @@
+N=1000,graph=email,method=lptva,r=0.1,beta=0.95,modify_type=hide,dj=0.0,reconstruct_type=ra
+k,prec,std_err
+0,0.8380833333333334,0.008611373869864975

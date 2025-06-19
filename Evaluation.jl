@@ -9,6 +9,8 @@ includet("Reconstruction.jl")
 using Graphs
 using Random
 using DataStructures
+using Base.Threads
+
 
 function evaluate_reconstruct_to_file(
     graph_type::Symbol,
@@ -27,15 +29,16 @@ function evaluate_reconstruct_to_file(
     @assert haskey(score_type_dict, reconstruct_type)
 
     path = "data/rec_$(String(reconstruct_type))_dj$(round(Int, dj*100))_$(String(graph_type))_$(loc_type)_r$(round(Int,r*100))_beta$(round(Int, beta*100)).csv"
+    println(k_vec)
 
-    open(path, "w") do io
+    open(path, "a") do io
         println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta,modify_type=$modify_type,dj=$dj,reconstruct_type=$reconstruct_type")
         println(io, "k,prec,std_err")
         g = graph_type_dict[graph_type]()
         precs = Array{Float64,2}(undef, (length(k_vec), N))
         for t in 1:N
-            if t % round(Int, N / 10) == 0
-                println("$reconstruct_type, dj=$dj: Starting $t iteration")
+            if (t - 1) % div(N, 4) == 0
+                println("$(String(loc_type)), $(String(reconstruct_type)), dj=$dj: Starting $(t-1) iteration")
             end
             loc_data::LocData = propagate_SI!(g, r, beta)
             sg, new_loc_data = modify_type_dict[modify_type](g, loc_data, dj)
@@ -65,6 +68,7 @@ function evaluate_reconstruct_to_file(
             println(io, "$k,$prec,$err")
         end
     end
+    println("Finished writing to $path")
 end
 
 
@@ -79,23 +83,33 @@ function evaluate_original_to_file(
     @assert haskey(graph_type_dict, graph_type)
     @assert haskey(loc_type_dict, loc_type)
     path = "data/loc_$(String(graph_type))_$(loc_type)_r$(round(Int,r*100))_beta$(round(Int, beta*100)).csv"
+    g = graph_type_dict[graph_type](;graph_args...)
+    output = Vector{String}(undef, N)
+
+    # println("Have $(nthreads()) threads\nAvailable: $(Sys.CPU_THREADS)")
+    for t in 1:N
+        if (t - 1) % (div(N, 4)) == 0
+            println("Starting $(t-1) iteration of beta=$beta r=$r")
+        end
+        g_copy = copy(g)
+        loc_data = propagate_SI!(g_copy, r, beta)
+        loc_result = loc_type == :pearson ?
+                     loc_type_dict[loc_type](g_copy, loc_data.obs_data) :
+                     loc_type_dict[loc_type](g_copy, loc_data.obs_data, beta)
+
+        rank = calc_rank(loc_data, loc_result, nv(g_copy))
+        prec = calc_prec(loc_data, loc_result)
+        output[t] = "$rank,$prec"
+    end
+
     open(path, "w") do io
         println(io, "N=$N,graph=$graph_type,method=$loc_type,r=$r,beta=$beta")
         println(io, "rank,precision")
-        g = graph_type_dict[graph_type](graph_args...)
-        for t in 1:N
-            if t % round(Int, N / 10) == 0
-                println("$loc_type: Starting $t iteration")
-            end
-            loc_data::LocData = propagate_SI!(g, r, beta)
-            loc_result = loc_type == :pearson ?
-                         loc_type_dict[loc_type](g, loc_data.obs_data) :
-                         loc_type_dict[loc_type](g, loc_data.obs_data, beta)
-            rank = calc_rank(loc_data, loc_result, nv(g))
-            prec = calc_prec(loc_data, loc_result)
-            println(io, "$rank,$prec")
+        for row in output
+            println(io, row)
         end
     end
+    println("Finished writing to $path")
 end
 
 
