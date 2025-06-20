@@ -38,31 +38,28 @@ function get_BRUTE_PEARSON_scores(g::SimpleGraph, S0=missing; obs_data::Dict{Int
     if ismissing(S0)
         S0 = sqrt(V)
     end
-
+    g_copy = copy(g)
+    
     # Create dictionary mapping each tester_node to its base pearson correlation
-    base_tester_scores = Dict{Int,Float64}()
-    while length(base_tester_scores) < S0
-        rnd = rand(1:V)
-        if !haskey(base_tester_scores, rnd)
-            base_tester_scores[rnd] = single_node_pearson_score(g, rnd, obs_data)
-        end
-    end
+    loc_result::Vector{Tuple{Int, Float64}} = loc_type_dict[loc_type](g, obs_data)
+    pred_source = loc_result[1][1]
+    loc_dict = Dict(x[1] => x[2] for x in loc_result)
+    base_tester_scores = Dict(s => loc_dict[s] for s in [neighbors(g, pred_source); pred_source])
 
     # calculate score for each non-observed link
     scores = Dict{Tuple{Int,Int},Float64}()
     for i in 1:V, j in i+1:V
-        g_temp = copy(g)
-        if has_edge(g_temp, i, j)
+        if has_edge(g_copy, i, j)
             continue
         end
-        add_edge!(g_temp, i, j)
+        add_edge!(g_copy, i, j)
         max_increase = -Inf
         for (tester, base_score) in base_tester_scores
-            increase = abs(single_node_pearson_score(g_temp, tester, obs_data)) - abs(base_score)
+            increase = abs(single_node_pearson_score(g_copy, tester, obs_data)) - abs(base_score)
             max_increase = increase > max_increase ? increase : max_increase
         end
         scores[(i, j)] = max_increase
-        rem_edge!(g_temp, i, j) 
+        rem_edge!(g_copy, i, j)
     end
 
     return scores
