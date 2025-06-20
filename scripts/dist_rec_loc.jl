@@ -2,11 +2,11 @@ using Distributed
 using Graphs
 include("../GraphCreation.jl")
 
-N = 4
+N = 10^3
 graph_type = :ba
 graph_args = Dict()
 graph_args = Dict(
-    :V => 800,
+    :V => 100,
     :n0 => 4,
     :k => 4
 )

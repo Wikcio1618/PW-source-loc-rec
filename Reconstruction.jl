@@ -41,7 +41,7 @@ function get_BRUTE_PEARSON_scores(g::SimpleGraph, S0=missing; obs_data::Dict{Int
     g_copy = copy(g)
     
     # Create dictionary mapping each tester_node to its base pearson correlation
-    loc_result::Vector{Tuple{Int, Float64}} = loc_type_dict[loc_type](g, obs_data)
+    loc_result::Vector{Tuple{Int, Float64}} = pearson_loc(g, obs_data)
     pred_source = loc_result[1][1]
     loc_dict = Dict(x[1] => x[2] for x in loc_result)
     base_tester_scores = Dict(s => loc_dict[s] for s in [neighbors(g, pred_source); pred_source])

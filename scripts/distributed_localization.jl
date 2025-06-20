@@ -3,14 +3,14 @@ using Distributed
 N = 10^3
 graph_type = :ba
 graph_args = Dict(
-    :V => 1000,
+    :V => 100,
     :n0 => 4,
     :k => 4
 )
 
-betas = [0.8]
+betas = [0.5, 0.8]
 methods = [:pearson]
-R = [0.1, 0.15, 0.2]
+R = [0.05, 0.1, 0.15, 0.2, 0.25]
 
 addprocs(length(R) * length(betas))
 @everywhere include("../Evaluation.jl")

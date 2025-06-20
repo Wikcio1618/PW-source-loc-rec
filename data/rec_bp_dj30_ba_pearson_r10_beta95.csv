@@ -1,5 +1,5 @@
-N=4,graph=ba,method=pearson,r=0.1,beta=0.95,modify_type=hide,dj=0.3,reconstruct_type=bp
+N=1000,graph=ba,method=pearson,r=0.1,beta=0.95,modify_type=hide,dj=0.3,reconstruct_type=bp
 k,prec,std_err
-0,1.0,0.0
-957,0.0,0.0
-1914,0.0,0.0
+0,0.2507583333333333,0.013178163441847022
+117,0.07908013375513376,0.008076549469868802
+234,0.049355555555555555,0.006658515908647409
