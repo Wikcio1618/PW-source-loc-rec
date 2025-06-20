@@ -136,9 +136,9 @@ function evaluate_modify_to_file(
         println(io, "rank,precision,dist")
         for t in 1:N
             if (t - 1) % div(N, 4) == 0
-                println("$(String(loc_type)), $(String(reconstruct_type)), dj=$dj: Starting $(t-1) iteration")
+                println("$(String(loc_type)), dj=$dj: Starting $(t-1) iteration")
             end
-            g = graph_type_dict[graph_type]()
+            g = graph_type_dict[graph_type](;graph_args...)
             loc_data::LocData = propagate_SI!(g, r, beta)
             sg, new_loc_data = modify_type_dict[modify_type](g, loc_data, dj)
             loc_result = loc_type == :pearson ?
@@ -151,6 +151,7 @@ function evaluate_modify_to_file(
             println(io, "$rank,$prec,$dist")
         end
     end
+    println("Finished writing to $path")
 end
 
 function calc_rank(loc_data::LocData, loc_result::Vector{Tuple{Int,Float64}}, V::Int)::Int
@@ -183,8 +184,11 @@ end
 function calc_dist(g::Graph, loc_data::LocData, loc_result::Vector{Tuple{Int,Float64}})::Int
     true_source = loc_data.source
     pred_source = loc_result[1][1]
-    dist = collect(values(get_path_lengths(g, true_source, Set(pred_source))))[1]
-    return dists
+    dist = 
+    true_source > nv(g) ? 
+    -1 : 
+    collect(values(get_path_lengths(g, true_source, Set(pred_source))))[1]
+    return dist
 end
 
 
