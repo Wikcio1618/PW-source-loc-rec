@@ -124,7 +124,8 @@ function evaluate_modify_to_file(
     r::Float64,
     N::Int,
     modify_type::Symbol,
-    dj::Float64
+    dj::Float64;
+    graph_args=Dict()
 )
     @assert haskey(graph_type_dict, graph_type)
     @assert haskey(loc_type_dict, loc_type)
@@ -132,10 +133,10 @@ function evaluate_modify_to_file(
     path = "data/mod_$(String(modify_type))_dj$(round(Int, dj*100))_$(String(graph_type))_$(loc_type)_r$(round(Int,r*100))_beta$(round(Int, beta*100)).csv"
     open(path, "w") do io
         println(io, "N=$N,modify=$modify_type,graph=$graph_type,dj=$dj,method=$loc_type,r=$r,beta=$beta")
-        println(io, "rank,precision")
+        println(io, "rank,precision,dist")
         for t in 1:N
-            if t % 100 == 0
-                println("Starting $t iteration")
+            if (t - 1) % div(N, 4) == 0
+                println("$(String(loc_type)), $(String(reconstruct_type)), dj=$dj: Starting $(t-1) iteration")
             end
             g = graph_type_dict[graph_type]()
             loc_data::LocData = propagate_SI!(g, r, beta)
@@ -146,7 +147,8 @@ function evaluate_modify_to_file(
 
             rank = calc_rank(new_loc_data, loc_result, nv(sg))
             prec = calc_prec(new_loc_data, loc_result)
-            println(io, "$rank,$prec")
+            dist = calc_dist(sg, new_loc_data, loc_result)
+            println(io, "$rank,$prec,$dist")
         end
     end
 end
@@ -176,6 +178,13 @@ function calc_prec(loc_data::LocData, loc_result::Vector{Tuple{Int,Float64}})::F
         num_exequo += 1
     end
     return predicted_exequo ? (1 / num_exequo) : 0
+end
+
+function calc_dist(g::Graph, loc_data::LocData, loc_result::Vector{Tuple{Int,Float64}})::Int
+    true_source = loc_data.source
+    pred_source = loc_result[1][1]
+    dist = collect(values(get_path_lengths(g, true_source, Set(pred_source))))[1]
+    return dists
 end
 
 
