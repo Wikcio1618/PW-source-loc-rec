@@ -1,15 +1,15 @@
+include("Evaluation.jl")
 
+using Plots
+# graph_type_list = [:cal, :email, :fb]
+# pred_type_list = [:srw, :ml]
 
-
-# graph_type_list = [:cel, :inf, :usa]
-# pred_type_list = [:srw]
-
-# graph_type = :inf
-# pred_type = :merw
-# res = calc_prec_link_pred(graph_type, pred_type; num_folds=5)
-# # print(res)
+graph_type = :email
+pred_type = :ml
+res = calc_prec_link_pred(graph_type, pred_type; num_folds=5)
+print(res)
 # println(mean(map(x->x[553 ], res)))
-# # plot(res)
+# plot(res)
 # plot(res)
 
 # Plot histogram

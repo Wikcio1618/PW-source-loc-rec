@@ -1,17 +1,28 @@
 import torch
-import networkx as nx
+import torch.nn as nn
+import torch.optim as optim
 
-def extract_features(g:nx.Graph, i:int, j:int, bc_map):
-    neighbors_i = set(g.neighbors(i))
-    neighbors_j = set(g.neighbors(j))
-    common = neighbors_i & neighbors_j
-    union = neighbors_i | neighbors_j
+from preprocessing import train_data_generator
 
-    deg_i = g.degree[i]
-    deg_j = g.degree[j]
-    common_neighbors = len(common)
-    jaccard = len(common) / len(union) if union else 0
-    pref_attach = deg_i * deg_j
-    ra_index = sum(1 / g.degree[z] for z in common) if common else 0
+def train(model, device='cpu', steps=1000, lr=1e-3):
+    model.to(device)
+    model.train()
+    
+    generator = train_data_generator()
 
-    return [deg_i, deg_j, common_neighbors, jaccard, pref_attach, ra_index]
+    criterion = nn.BCELoss()
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+
+    for step in range(steps):
+        X_batch, y_batch = next(generator)
+        X_tensor = torch.tensor(X_batch, device=device)
+        y_tensor = torch.tensor(y_batch, device=device).unsqueeze(1)
+
+        optimizer.zero_grad()
+        output = model(X_tensor)
+        loss = criterion(output, y_tensor)
+        loss.backward()
+        optimizer.step()
+
+        if step % 100 == 0:
+            print(f"Step {step}: loss = {loss.item():.4f}")

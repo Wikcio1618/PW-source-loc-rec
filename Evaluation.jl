@@ -193,7 +193,7 @@ end
 
 
 # LINK PREDICTION
-function calc_prec_link_pred(graph_type::Symbol, pred_type::Symbol; num_folds=5)
+function calc_prec_link_pred(graph_type::Symbol, pred_type::Symbol; num_folds=5)::Float64
     @assert haskey(graph_type_dict, graph_type)
     @assert haskey(score_type_dict, pred_type)
 
@@ -201,12 +201,11 @@ function calc_prec_link_pred(graph_type::Symbol, pred_type::Symbol; num_folds=5)
     edges_list = collect(edges(g)) # E
     shuffle!(edges_list)
     fold_size = div(length(edges_list), num_folds)
-    println(fold_size)
 
-    res = Vector(undef, num_folds)
+    res = Float64[]
 
     for i in 1:num_folds
-        prec_list = []
+        # prec_list = []
         eval_pairs = Set(edge2pair(edge) for edge in edges_list[1+fold_size*(i-1):fold_size*i]) # E_V
         train_pairs = Set(edge2pair(edge) for edge in edges_list if edge2pair(edge) ∉ eval_pairs) # E_T
         train_graph = SimpleGraph(nv(g))
@@ -227,13 +226,13 @@ function calc_prec_link_pred(graph_type::Symbol, pred_type::Symbol; num_folds=5)
             if pair ∈ eval_pairs
                 TP += 1
             end
-            append!(prec_list, TP / k)
+            # append!(prec_list, TP / k)
         end
-        res[i] = prec_list
-        # append!(res, TP / fold_size)
+        # res[i] = prec_list
+        append!(res, TP / fold_size)
     end
 
-    return res
+    return mean(res)
 end
 
 function calc_auc_link_pred(graph_type::Symbol, pred_type::Symbol; num_folds=5)::Float64

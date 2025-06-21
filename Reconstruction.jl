@@ -2,6 +2,7 @@ using Graphs
 using DataStructures
 using LinearAlgebra
 using SparseArrays
+using PyCall
 
 include("Localization.jl")
 
@@ -27,6 +28,61 @@ function reconstruct_top_k!(g::SimpleGraph, heap::PriorityQueue, k::Int; type=:a
     return g_mod
 end
 
+function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weights.pt", model_module="model")::Dict{Tuple{Int,Int},Float64}
+    sys = pyimport("sys")
+    push!(sys."path", "./machine_learning")
+    torch = pyimport("torch")
+    model_py = pyimport(model_module)
+
+    model = model_py.LinkPredictor(7)
+    model[:load_state_dict](torch[:load](model_path))
+    model[:eval]()
+
+    bc_list = betweenness_centrality(g)
+    V = nv(g)
+    path_lengths = [get_path_lengths(g, i, Set(Vertices(g))) for i in 1:V]
+    scores = Dict{Tuple{Int,Int},Float64}()
+    for i in 1:V, j in i+1:V
+        if i % 10
+            println(i)
+        end
+        if has_edge(g, i, j)
+            scores[(i, j)] = 0.0
+        end
+
+        x = extract_features(g, i, j, bc_list, path_lengths)
+        np = pyimport("numpy")
+        x_np = np.array(x, dtype=np.float32)
+        x_tensor = torch[:from_numpy](x_np).reshape(1, -1)
+        ctx = torch[:no_grad]()
+        ctx[:__enter__]()
+        prob = model(x_tensor).item()
+        scores[(i, j)] = prob
+        ctx[:__exit__](nothing, nothing, nothing)
+    end
+
+    return scores
+end
+
+function extract_features(g::SimpleGraph, i::Int, j::Int, bc_list::Vector{Float64}, path_lengths::Vector{Dict{Int,Int}})
+    neighbors_i = Set(neighbors(g, i))
+    neighbors_j = Set(neighbors(g, j))
+    common_neis = intersect(neighbors_i, neighbors_j)
+    all_neis = union(neighbors_i, neighbors_j)
+
+    deg_i = degree(g, i)
+    deg_j = degree(g, j)
+    common_neighbors = length(common_neis)
+    jaccard = !isempty(all_neis) ? length(common_neis) / length(all_neis) : 0.0
+
+    bc_i = bc_list[i]
+    bc_j = bc_list[j]
+
+    sp_len = path_lengths[i][j]
+
+    return [deg_i, deg_j, common_neighbors, jaccard, bc_i, bc_j, sp_len]
+end
+
 """ 
 Calculates scores of each non-observed link by calculating how much its presence increases pearson correlation.\n
 New correlation is calculated for each of `S0` randomly selected `tester nodes`.\n
@@ -39,9 +95,9 @@ function get_BRUTE_PEARSON_scores(g::SimpleGraph, S0=missing; obs_data::Dict{Int
         S0 = sqrt(V)
     end
     g_copy = copy(g)
-    
+
     # Create dictionary mapping each tester_node to its base pearson correlation
-    loc_result::Vector{Tuple{Int, Float64}} = pearson_loc(g, obs_data)
+    loc_result::Vector{Tuple{Int,Float64}} = pearson_loc(g, obs_data)
     pred_source = loc_result[1][1]
     loc_dict = Dict(x[1] => x[2] for x in loc_result)
     base_tester_scores = Dict(s => loc_dict[s] for s in [neighbors(g, pred_source); pred_source])
@@ -296,7 +352,8 @@ const score_type_dict = Dict(
     :fp => get_FP_scores,
     :srw => get_SRW_scores,
     :merw => get_MERW_scores,
-    :bp => get_BRUTE_PEARSON_scores
+    :bp => get_BRUTE_PEARSON_scores,
+    :ml => get_ML_scores
 )
 
 """
