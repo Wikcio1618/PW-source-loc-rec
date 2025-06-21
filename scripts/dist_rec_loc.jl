@@ -3,20 +3,20 @@ using Graphs
 include("../GraphCreation.jl")
 
 N = 10^3
-graph_type = :ba
+graph_type = :email
 graph_args = Dict()
-graph_args = Dict(
-    :V => 100,
-    :n0 => 4,
-    :k => 4
-)
+# graph_args = Dict(
+#     :V => 100,
+#     :n0 => 4,
+#     :k => 4
+# )
 E = ne(graph_type_dict[graph_type](; graph_args...))
 beta = 0.95
 r = 0.1
 modify_type = :hide
 
-methods = [:pearson]
-reconstruct_type_list = [:bp]
+methods = [:pearson, :gmla]
+reconstruct_type_list = [:srw]
 # dj_list = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
 dj_list = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
 
@@ -36,7 +36,7 @@ pmap(
 			modify_type,
 			dj,
 			rec_type,
-			dj == 0.0 ? [0] : [round(Int, n * dj * E) for n in [0, 1, 2]],
+			dj == 0.0 ? [0] : [round(Int, n * dj * E) for n in [0.05, 0.1, 0.25, 0.5, 1]],
 			;graph_args = graph_args
 		)
 	end,
