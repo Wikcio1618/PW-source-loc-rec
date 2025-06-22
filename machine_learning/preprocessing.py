@@ -17,22 +17,23 @@ def train_data_generator(V = 1000, batch_size = 128, dj = None):
             # Set for quick edge membership check
             full_edges = set(g.edges())
             observed_edges = set(g_mod.edges())
+            node_idxs = list(g_mod.nodes())
 
             # Sample positive edges (label = 1)
             pos_edges = set()
             while len(pos_edges) < batch_size // 2:
-                u, v = random.sample(list(g_mod.nodes), 2)
-                if (u, v) in observed_edges or (v, u) in observed_edges:
+                u, v = random.sample(node_idxs, 2, replace=False)
+                if tuple(sorted((u, v))) in observed_edges:
                     continue
-                if (u, v) in full_edges or (v, u) in full_edges:
+                if tuple(sorted((u, v)))in full_edges:
                     pos_edges.add((u, v))
             pos_edges = list(pos_edges)
 
             # Sample negative edges (non-existent in g)
             neg_edges = set()
             while len(neg_edges) < batch_size // 2:
-                u, v = random.sample(list(g_mod.nodes), 2)
-                if (u, v) in full_edges or (v, u) in full_edges:
+                u, v = random.sample(node_idxs, 2, replace=False)
+                if tuple(sorted((u, v))) in full_edges:
                     continue
                 neg_edges.add((u, v))
             neg_edges = list(neg_edges)

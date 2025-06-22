@@ -36,7 +36,7 @@ pmap(
 			modify_type,
 			dj,
 			rec_type,
-			dj == 0.0 ? [0] : [round(Int, n * dj * E) for n in w[0.05, 0.1, 0.25, 0.5, 1]],
+			dj == 0.0 ? [0] : [round(Int, n * dj * E) for n in [0.05, 0.1, 0.25, 0.5, 1]],
 			;graph_args = graph_args
 		)
 	end,

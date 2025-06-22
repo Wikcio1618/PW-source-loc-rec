@@ -157,29 +157,32 @@ Given node `src` and graph `g` returns a dictionary mapping index of each node f
 """
 function get_path_lengths(g::SimpleGraph, src::Int, targets::Set{Int})::Dict{Int,Int}
     path_lengths = Dict{Int,Int}()
-
-    queue = [src]
     visited = Set([src])
-    curr_length = 0
-    while length(path_lengths) < length(targets) && length(visited) - length(queue) < nv(g)
-        next_queue = Int[]
-        for curr_node in queue
-            if curr_node ∈ targets
-                path_lengths[curr_node] = curr_length
-            end
-            for nei in neighbors(g, curr_node)
-                if nei ∉ visited
-                    push!(visited, nei)
-                    push!(next_queue, nei)
-                end
+    queue = [(src, 0)]
+
+    while !isempty(queue) && length(path_lengths) < length(targets)
+        (curr, dist) = popfirst!(queue)
+
+        if curr in targets
+            path_lengths[curr] = dist
+        end
+
+        for nei in neighbors(g, curr)
+            if nei ∉ visited
+                push!(visited, nei)
+                push!(queue, (nei, dist + 1))
             end
         end
-        queue = next_queue
-        curr_length += 1
     end
 
+    for target in collect(targets)
+        if !haskey(path_lengths, target)
+            path_lengths[target] = 1e6
+        end
+    end
     return path_lengths
 end
+
 
 """
 Given node `target` and TREE graph `g` return dictionary mapping index of each target node in the graph to the vector of indexes defining a path from `nodes` to the `target`

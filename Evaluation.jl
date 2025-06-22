@@ -213,8 +213,6 @@ function calc_prec_link_pred(graph_type::Symbol, pred_type::Symbol; num_folds=5)
             add_edge!(train_graph, pair...)
         end
         scores_heap = PriorityQueue(Base.Order.Reverse, score_type_dict[pred_type](train_graph))
-        # return collect(values(score_type_dict[pred_type](train_graph)))
-        # println(sort(collect(scores_heap), by=x->x[2], order=Base.Reverse)[1:200])
         TP = 0
         k = 0
         while k < 5 * fold_size && !isempty(scores_heap) # |E_O| = |E_V|

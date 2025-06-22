@@ -31,23 +31,21 @@ end
 function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weights.pt", model_module="model")::Dict{Tuple{Int,Int},Float64}
     sys = pyimport("sys")
     push!(sys."path", "./machine_learning")
+
     torch = pyimport("torch")
     model_py = pyimport(model_module)
-
     model = model_py.LinkPredictor(7)
     model[:load_state_dict](torch[:load](model_path))
     model[:eval]()
 
     bc_list = betweenness_centrality(g)
     V = nv(g)
-    path_lengths = [get_path_lengths(g, i, Set(Vertices(g))) for i in 1:V]
+    path_lengths = [get_path_lengths(g, i, Set(i+1:V)) for i in 1:V]
     scores = Dict{Tuple{Int,Int},Float64}()
     for i in 1:V, j in i+1:V
-        if i % 10
-            println(i)
-        end
         if has_edge(g, i, j)
             scores[(i, j)] = 0.0
+            continue
         end
 
         x = extract_features(g, i, j, bc_list, path_lengths)

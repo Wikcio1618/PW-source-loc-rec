@@ -2,6 +2,73 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
+
+
+def reconstruction_plots(
+        graph_type, 
+        reconstruct_type, 
+        loc_type, 
+        r, 
+        beta, 
+        dj_list, 
+        labels
+    ):
+    
+    plt.style.use('ggplot')  # or 'classic', 'bmh', 'fivethirtyeight'
+
+    plt.rcParams.update({
+        'font.size': 16,
+        'axes.labelsize': 18,
+        'axes.titlesize': 20,
+        'legend.fontsize': 14,
+        'xtick.labelsize': 14,
+        'ytick.labelsize': 14,
+        'axes.edgecolor': 'black',
+        'axes.linewidth': 1.2,
+        'grid.linestyle': '--',
+        'grid.linewidth': 0.7,
+        'grid.alpha': 0.6,
+        'axes.grid': True,
+        'lines.linewidth': 2.5,
+        'lines.markersize': 8,
+    })
+
+    k_groups = {}
+    for dj in dj_list:
+        filename =f"rec_{reconstruct_type}_dj{int(dj*100)}_{graph_type}_{loc_type}_r{int(r*100)}_beta{int(beta*100)}.csv"
+        path = os.path.join("../data", filename)
+        df = pd.read_csv(path, engine="python", skiprows=1)
+        for i, (k, prec, err) in enumerate(zip(df["k"], df["prec"], df["std_err"])):
+            k_groups.setdefault(i, {"dj_vals": [], "precs": [], "errs": []})
+            k_groups[i]["dj_vals"].append(dj)
+            k_groups[i]["precs"].append(prec)
+            k_groups[i]["errs"].append(err)
+
+    colors = plt.cm.plasma(np.linspace(0, 1, len(labels)))
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    plot_idx = 0
+
+    for i, (group_id, data) in enumerate(k_groups.items()):
+        dj_vals = np.array(data["dj_vals"])
+        precs = np.array(data["precs"])
+        errs = np.array(data["errs"])
+
+        ax.plot(dj_vals, precs, color=colors[plot_idx], label=labels[plot_idx])
+        ax.fill_between(dj_vals, precs - errs, precs + errs, color=colors[plot_idx], alpha=0.25)
+
+        plot_idx += 1
+
+    ax.set_xlabel("dj (odległość Jaccarda)")
+    ax.set_ylabel("Precyzja")
+    ax.set_title(f"Precyzja {reconstruct_type.upper()} + {loc_type} + {graph_type}")
+    ax.legend(title="Ilość zrekonstruowanych linków", loc="upper right", frameon=False)
+    ax.grid(True, linestyle='--', linewidth=0.7, alpha=0.6)
+
+    plt.tight_layout()
+    plt.show()
+
 
 def analyze_distance_distributions(
     modify_type, graph_type, loc_type, r, beta, 
@@ -44,5 +111,3 @@ def analyze_distance_distributions(
         print(summary)
     else:
         print("No valid data to analyze.")
-
-    
