@@ -29,11 +29,16 @@ function reconstruct_top_k!(g::SimpleGraph, heap::PriorityQueue, k::Int; type=:a
 end
 
 function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weights2.pt", model_module="model")::Dict{Tuple{Int,Int},Float64}
+
+    np = pyimport("numpy")
     sys = pyimport("sys")
     push!(sys."path", "./machine_learning")
-
     torch = pyimport("torch")
     model_py = pyimport(model_module)
+
+    @time [get_path_lengths(g, i, Set(i+1:nv(g))) for i in 1:nv(g)]
+    @time betweenness_centrality(g)
+
     model = model_py.LinkPredictor()
     model[:load_state_dict](torch[:load](model_path))
     model[:eval]()
@@ -42,21 +47,27 @@ function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weight
     pr = pagerank(g)
     clust = local_clustering_coefficient(g, vertices(g))
     scores = Dict{Tuple{Int,Int},Float64}()
+    edge_list = []
+    feature_list = []
     for i in 1:V, j in i+1:V
         if has_edge(g, i, j)
-            scores[(i, j)] = 0.0
             continue
         end
+        push!(edge_list, (i, j))
+        features = extract_features(g, i, j, pr, clust)
+        push!(feature_list, Float32.(features))
+    end
 
-        x = extract_features(g, i, j, pr, clust)
-        np = pyimport("numpy")
-        x_np = np.array(x, dtype=np.float32)
-        x_tensor = torch[:from_numpy](x_np).reshape(1, -1)
-        ctx = torch[:no_grad]()
-        ctx[:__enter__]()
-        prob = model(x_tensor).item()
-        scores[(i, j)] = prob
-        ctx[:__exit__](nothing, nothing, nothing)
+    x_np = np.array(feature_list, dtype=np.float32)
+    x_tensor = torch[:from_numpy](x_np)
+    ctx = torch[:no_grad]()
+    ctx[:__enter__]()
+    probs = model(x_tensor).tolist()
+    ctx[:__exit__](nothing, nothing, nothing)
+
+    scores = Dict{Tuple{Int,Int},Float64}()
+    for (k, e) in enumerate(edge_list)
+        scores[e] = probs[k]
     end
 
     return scores
