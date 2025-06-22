@@ -3,3 +3,4 @@ lab.ipynb
 *.ipynb
 data
 images
+**/__pycache__

@@ -28,19 +28,19 @@ function reconstruct_top_k!(g::SimpleGraph, heap::PriorityQueue, k::Int; type=:a
     return g_mod
 end
 
-function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weights.pt", model_module="model")::Dict{Tuple{Int,Int},Float64}
+function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weights2.pt", model_module="model")::Dict{Tuple{Int,Int},Float64}
     sys = pyimport("sys")
     push!(sys."path", "./machine_learning")
 
     torch = pyimport("torch")
     model_py = pyimport(model_module)
-    model = model_py.LinkPredictor(7)
+    model = model_py.LinkPredictor()
     model[:load_state_dict](torch[:load](model_path))
     model[:eval]()
 
-    bc_list = betweenness_centrality(g)
     V = nv(g)
-    path_lengths = [get_path_lengths(g, i, Set(i+1:V)) for i in 1:V]
+    pr = pagerank(g)
+    clust = local_clustering_coefficient(g, vertices(g))
     scores = Dict{Tuple{Int,Int},Float64}()
     for i in 1:V, j in i+1:V
         if has_edge(g, i, j)
@@ -48,7 +48,7 @@ function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weight
             continue
         end
 
-        x = extract_features(g, i, j, bc_list, path_lengths)
+        x = extract_features(g, i, j, pr, clust)
         np = pyimport("numpy")
         x_np = np.array(x, dtype=np.float32)
         x_tensor = torch[:from_numpy](x_np).reshape(1, -1)
@@ -62,7 +62,13 @@ function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weight
     return scores
 end
 
-function extract_features(g::SimpleGraph, i::Int, j::Int, bc_list::Vector{Float64}, path_lengths::Vector{Dict{Int,Int}})
+function extract_features(
+    g::SimpleGraph,
+    i::Int,
+    j::Int,
+    pr::Vector{Float64},
+    clust::Vector{Float64}
+)
     neighbors_i = Set(neighbors(g, i))
     neighbors_j = Set(neighbors(g, j))
     common_neis = intersect(neighbors_i, neighbors_j)
@@ -73,12 +79,17 @@ function extract_features(g::SimpleGraph, i::Int, j::Int, bc_list::Vector{Float6
     common_neighbors = length(common_neis)
     jaccard = !isempty(all_neis) ? length(common_neis) / length(all_neis) : 0.0
 
-    bc_i = bc_list[i]
-    bc_j = bc_list[j]
+    pr_i = pr[i]
+    pr_j = pr[j]
+    cl_i = clust[i]
+    cl_j = clust[j]
 
-    sp_len = path_lengths[i][j]
-
-    return [deg_i, deg_j, common_neighbors, jaccard, bc_i, bc_j, sp_len]
+    return [
+        deg_i, deg_j,
+        common_neighbors, jaccard,
+        pr_i, pr_j,
+        cl_i, cl_j
+    ]
 end
 
 """ 

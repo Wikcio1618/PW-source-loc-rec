@@ -4,7 +4,7 @@ import torch.optim as optim
 
 from preprocessing import train_data_generator
 
-def train(model, device='cpu', steps=1000, lr=1e-3):
+def train(model, device='cpu', steps=500, lr=1e-3):
     model.to(device)
     model.train()
     
@@ -24,5 +24,5 @@ def train(model, device='cpu', steps=1000, lr=1e-3):
         loss.backward()
         optimizer.step()
 
-        if step % 100 == 0:
+        if step % 50 == 0:
             print(f"Step {step}: loss = {loss.item():.4f}")
