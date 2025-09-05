@@ -36,9 +36,6 @@ function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weight
     torch = pyimport("torch")
     model_py = pyimport(model_module)
 
-    @time [get_path_lengths(g, i, Set(i+1:nv(g))) for i in 1:nv(g)]
-    @time betweenness_centrality(g)
-
     model = model_py.LinkPredictor()
     model[:load_state_dict](torch[:load](model_path))
     model[:eval]()
@@ -46,6 +43,8 @@ function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weight
     V = nv(g)
     pr = pagerank(g)
     clust = local_clustering_coefficient(g, vertices(g))
+    path_lengths = @time [get_path_lengths(g, i, Set(i+1:V)) for i in 1:V]
+    bc_list = @time local_clustering_coefficient(g, vertices(g))
     scores = Dict{Tuple{Int,Int},Float64}()
     edge_list = []
     feature_list = []
@@ -54,7 +53,7 @@ function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weight
             continue
         end
         push!(edge_list, (i, j))
-        features = extract_features(g, i, j, pr, clust)
+        features = extract_features(g, i, j, pr, clust, bc_list, path_lengths)
         push!(feature_list, Float32.(features))
     end
 
@@ -78,7 +77,9 @@ function extract_features(
     i::Int,
     j::Int,
     pr::Vector{Float64},
-    clust::Vector{Float64}
+    clust::Vector{Float64},
+    bc_list::Vector{Float64},
+    path_lengths::Vector{Dict{Int, Int}}
 )
     neighbors_i = Set(neighbors(g, i))
     neighbors_j = Set(neighbors(g, j))
@@ -90,6 +91,9 @@ function extract_features(
     common_neighbors = length(common_neis)
     jaccard = !isempty(all_neis) ? length(common_neis) / length(all_neis) : 0.0
 
+    bc_i = bc_list[i]
+    bc_j = bc_list[j]
+    path_length = path_length[i][j]
     pr_i = pr[i]
     pr_j = pr[j]
     cl_i = clust[i]
@@ -98,6 +102,8 @@ function extract_features(
     return [
         deg_i, deg_j,
         common_neighbors, jaccard,
+        bc_i, bc_j,
+        path_length,
         pr_i, pr_j,
         cl_i, cl_j
     ]

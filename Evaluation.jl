@@ -215,7 +215,7 @@ function calc_prec_link_pred(graph_type::Symbol, pred_type::Symbol; num_folds=5)
         scores_heap = PriorityQueue(Base.Order.Reverse, score_type_dict[pred_type](train_graph))
         TP = 0
         k = 0
-        while k < 5 * fold_size && !isempty(scores_heap) # |E_O| = |E_V|
+        while k < fold_size && !isempty(scores_heap) # |E_O| = |E_V|
             pair = dequeue!(scores_heap)
             if pair ∈ train_pairs
                 continue

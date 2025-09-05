@@ -8,7 +8,7 @@ def train(model, device='cpu', steps=500, lr=1e-3):
     model.to(device)
     model.train()
     
-    generator = train_data_generator()
+    generator = train_data_generator(dj = 0.2)
 
     criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)

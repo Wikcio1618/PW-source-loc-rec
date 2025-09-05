@@ -1,6 +1,7 @@
 import random
 import numpy as np
 import networkx as nx
+import time 
 
 def train_data_generator(V=1000, batch_size=128, dj=None):
     if dj is None:
@@ -38,19 +39,22 @@ def train_data_generator(V=1000, batch_size=128, dj=None):
             samples = [(u, v, 1) for u, v in pos_edges] + [(u, v, 0) for u, v in neg_edges]
             random.shuffle(samples)
 
+            bc_map = nx.betweenness_centrality(g_mod)
+            pl_map = dict(nx.shortest_path_length(g_mod, weight=None))
+
             pr_map = nx.pagerank(g_mod)
             cc_map = nx.clustering(g_mod)
 
             X, y = [], []
             for u, v, label in samples:
-                features = extract_features(g_mod, u, v, pr_map, cc_map)
+                features = extract_features(g_mod, u, v, pr_map, cc_map, bc_map, pl_map)
                 X.append(features)
                 y.append(label)
 
             yield np.array(X, dtype=np.float32), np.array(y, dtype=np.float32)
     
 
-def extract_features(g: nx.Graph, i: int, j: int, pr_map: dict, cc_map: dict):
+def extract_features(g: nx.Graph, i: int, j: int, pr_map: dict, cc_map: dict, bc_map:dict, pl_map:dict):
     neighbors_i = set(g.neighbors(i))
     neighbors_j = set(g.neighbors(j))
     common = neighbors_i & neighbors_j
@@ -61,12 +65,16 @@ def extract_features(g: nx.Graph, i: int, j: int, pr_map: dict, cc_map: dict):
     common_neighbors = len(common)
     jaccard = len(common) / len(union) if union else 0.0
 
+    bc_i = bc_map.get(i, 0.0)
+    bc_j = bc_map.get(j, 0.0)
+    path_length = pl_map[i].get(j, 0.0)
     pr_i = pr_map.get(i, 0.0)
     pr_j = pr_map.get(j, 0.0)
     cc_i = cc_map.get(i, 0.0)
     cc_j = cc_map.get(j, 0.0)
+    
 
-    return [deg_i, deg_j, common_neighbors, jaccard, pr_i, pr_j, cc_i, cc_j]
+    return [deg_i, deg_j, common_neighbors, jaccard, bc_i, bc_j, path_length, pr_i, pr_j, cc_i, cc_j]
 
 def hide_edges(g:nx.Graph, dj) -> nx.Graph:
     g_new = g.copy()
