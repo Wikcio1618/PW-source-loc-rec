@@ -28,7 +28,7 @@ function reconstruct_top_k!(g::SimpleGraph, heap::PriorityQueue, k::Int; type=:a
     return g_mod
 end
 
-function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weights2.pt", model_module="model")::Dict{Tuple{Int,Int},Float64}
+function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weights_fb.pt", model_module="model")::Dict{Tuple{Int,Int},Float64}
 
     np = pyimport("numpy")
     sys = pyimport("sys")
@@ -43,8 +43,8 @@ function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weight
     V = nv(g)
     pr = pagerank(g)
     clust = local_clustering_coefficient(g, vertices(g))
-    path_lengths = @time [get_path_lengths(g, i, Set(i+1:V)) for i in 1:V]
-    bc_list = @time local_clustering_coefficient(g, vertices(g))
+    path_lengths = [get_path_lengths(g, i, Set(i+1:V)) for i in 1:V]
+    bc_list = local_clustering_coefficient(g, vertices(g))
     scores = Dict{Tuple{Int,Int},Float64}()
     edge_list = []
     feature_list = []
@@ -93,7 +93,7 @@ function extract_features(
 
     bc_i = bc_list[i]
     bc_j = bc_list[j]
-    path_length = path_length[i][j]
+    path_length = path_lengths[i][j]
     pr_i = pr[i]
     pr_j = pr[j]
     cl_i = clust[i]

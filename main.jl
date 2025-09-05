@@ -16,8 +16,8 @@ include("Evaluation.jl")
 using DataFrames
 using CSV
 
-graph_type_list = [:inf, :usa, :cel, :cal, :email, :fb]
-pred_type_list = [:ra, :srw]
+graph_type_list = [:fb]
+pred_type_list = [:ml]
 
 ppl_df = DataFrame(Graph=String[], Method=String[], PPL=Float64[])
 auc_df = DataFrame(Graph=String[], Method=String[], AUC=Float64[])

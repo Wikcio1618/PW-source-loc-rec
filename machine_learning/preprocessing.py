@@ -1,3 +1,5 @@
+from networks import make_FB_graph
+
 import random
 import numpy as np
 import networkx as nx
@@ -8,9 +10,10 @@ def train_data_generator(V=1000, batch_size=128, dj=None):
         dj_list = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
     else:
         dj_list = [dj]
+        
+    g = make_FB_graph()
     
     while True:
-        g = nx.barabasi_albert_graph(n=V, m=4)
         for dj_val in dj_list:
             assert batch_size // 2 <= dj_val * g.number_of_edges()
             g_mod = hide_edges(g, dj_val)
