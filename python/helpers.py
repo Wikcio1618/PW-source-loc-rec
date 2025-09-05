@@ -3,7 +3,19 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import math
 
+def get_localisation_data_from_file(path:str):
+    with open(path, "r") as file:
+        lines = file.readlines()[2:]
+        prec = [float(line.split(',')[1]) for line in lines]
+        precs.append(np.mean(prec))
+        errs.append(np.std(prec) / math.sqrt(len(prec)))
+
+        precs = np.array(precs)
+        errs = np.array(errs)
+    
+    return precs, errs
 
 def reconstruction_plots(
         graph_type, 
