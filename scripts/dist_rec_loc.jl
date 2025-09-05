@@ -2,8 +2,8 @@ using Distributed
 using Graphs
 include("../GraphCreation.jl")
 
-N = 300
-graph_type = :email
+N = 10
+graph_type = :fb
 graph_args = Dict()
 # graph_args = Dict(
 #     :V => 100,
@@ -16,7 +16,7 @@ r = 0.1
 modify_type = :hide
 
 methods = [:pearson, :gmla]
-reconstruct_type_list = [:srw, :ml]
+reconstruct_type_list = [:ml]
 # dj_list = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
 dj_list = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
 
