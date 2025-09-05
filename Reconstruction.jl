@@ -36,11 +36,8 @@ function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weight
     torch = pyimport("torch")
     model_py = pyimport(model_module)
 
-    @time [get_path_lengths(g, i, Set(i+1:nv(g))) for i in 1:nv(g)]
-    @time betweenness_centrality(g)
-
     model = model_py.LinkPredictor()
-    model[:load_state_dict](torch[:load](model_path))
+    model[:load_state_dict](torch[:load](model_path, weights_only=true))
     model[:eval]()
 
     V = nv(g)
