@@ -51,11 +51,11 @@ def reconstruction_plots(
         filename =f"rec_{reconstruct_type}_dj{int(dj*100)}_{graph_type}_{loc_type}_r{int(r*100)}_beta{int(beta*100)}.csv"
         path = os.path.join("../data", filename)
         df = pd.read_csv(path, engine="python", skiprows=1)
-        for i, (k, prec, err) in enumerate(zip(df["k"], df["prec"], df["std_err"])):
-            k_groups.setdefault(i, {"dj_vals": [], "precs": [], "errs": []})
+        for i, (k, prec, err) in enumerate(zip(df["k"], df["prec"], df["prec_err"])):
+            k_groups.setdefault(i, {"dj_vals": [], "prec": [], "prec_err": []})
             k_groups[i]["dj_vals"].append(dj)
-            k_groups[i]["precs"].append(prec)
-            k_groups[i]["errs"].append(err)
+            k_groups[i]["prec"].append(prec)
+            k_groups[i]["prec_err"].append(err)
 
     colors = plt.cm.plasma(np.linspace(0, 1, len(labels)))
 
@@ -64,8 +64,8 @@ def reconstruction_plots(
 
     for i, (group_id, data) in enumerate(k_groups.items()):
         dj_vals = np.array(data["dj_vals"])
-        precs = np.array(data["precs"])
-        errs = np.array(data["errs"])
+        precs = np.array(data["prec"])
+        errs = np.array(data["prec_err"])
 
         ax.plot(dj_vals, precs, color=colors[plot_idx], label=labels[plot_idx])
         ax.fill_between(dj_vals, precs - errs, precs + errs, color=colors[plot_idx], alpha=0.25)
