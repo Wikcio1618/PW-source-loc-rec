@@ -28,7 +28,7 @@ function reconstruct_top_k!(g::SimpleGraph, heap::PriorityQueue, k::Int; type=:a
     return g_mod
 end
 
-function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weights_fb.pt", model_module="model")::Dict{Tuple{Int,Int},Float64}
+function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weights64_1e3.pt", model_module="model")::Dict{Tuple{Int,Int},Float64}
 
     np = pyimport("numpy")
     sys = pyimport("sys")
@@ -36,7 +36,7 @@ function get_ML_scores(g::SimpleGraph; model_path="machine_learning/model_weight
     torch = pyimport("torch")
     model_py = pyimport(model_module)
 
-    model = model_py.LinkPredictor()
+    model = model_py.LinkPredictor(hidden_dim=64)
     model[:load_state_dict](torch[:load](model_path, weights_only=true))
     model[:eval]()
 
@@ -79,35 +79,43 @@ function extract_features(
     pr::Vector{Float64},
     clust::Vector{Float64},
     bc_list::Vector{Float64},
-    path_lengths::Vector{Dict{Int, Int}}
+    path_lengths::Vector{Dict{Int,Int}}
 )
+    # Local similarity measures
     neighbors_i = Set(neighbors(g, i))
     neighbors_j = Set(neighbors(g, j))
     common_neis = intersect(neighbors_i, neighbors_j)
     all_neis = union(neighbors_i, neighbors_j)
 
-    deg_i = degree(g, i)
-    deg_j = degree(g, j)
-    common_neighbors = length(common_neis)
     jaccard = !isempty(all_neis) ? length(common_neis) / length(all_neis) : 0.0
+    adamic_adar = sum((1 / log(1 + degree(g, z)) for z in common_neis); init=0.0)
+    resource_alloc = sum((1 / degree(g, z) for z in common_neis); init=0.0)
+    pref_attach = degree(g, i) * degree(g, j)
 
+
+    # Node-level features
     bc_i = bc_list[i]
     bc_j = bc_list[j]
-    path_length = path_lengths[i][j]
     pr_i = pr[i]
     pr_j = pr[j]
     cl_i = clust[i]
     cl_j = clust[j]
 
+    # Distance
+    path_length = get(path_lengths[i], j, 0)
+
+    # Global stats
+    num_edges = ne(g)
+    mean_degree = 2num_edges / nv(g)
+    density = 2num_edges / (nv(g) * (nv(g) - 1))
+
     return [
-        deg_i, deg_j,
-        common_neighbors, jaccard,
-        bc_i, bc_j,
-        path_length,
-        pr_i, pr_j,
-        cl_i, cl_j
+        jaccard, adamic_adar, resource_alloc, pref_attach,
+        bc_i, bc_j, pr_i, pr_j, cl_i, cl_j,
+        path_length, mean_degree, density
     ]
 end
+
 
 """ 
 Calculates scores of each non-observed link by calculating how much its presence increases pearson correlation.\n
@@ -252,8 +260,8 @@ function get_CN_scores(g::SimpleGraph)::Dict{Tuple{Int,Int},Float64}
 end
 
 function get_RWR_scores(g::SimpleGraph; alpha=0.5)
-    eps = 1e-5
-    max_iter = 100
+    eps = 1e-6
+    max_iter = 1000
     V = nv(g)
 
     adj_mat = adjacency_matrix(g, Float64)

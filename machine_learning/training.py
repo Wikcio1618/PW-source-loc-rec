@@ -8,7 +8,7 @@ def train(model, device='cpu', steps=500, lr=1e-3):
     model.to(device)
     model.train()
     
-    generator = train_data_generator(dj = 0.2)
+    generator = train_data_generator()
 
     criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -24,5 +24,5 @@ def train(model, device='cpu', steps=500, lr=1e-3):
         loss.backward()
         optimizer.step()
 
-        if step % 50 == 0:
+        if step % 10 == 0:
             print(f"Step {step}: loss = {loss.item():.4f}")

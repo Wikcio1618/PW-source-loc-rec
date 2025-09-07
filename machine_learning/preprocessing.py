@@ -3,81 +3,86 @@ from networks import make_FB_graph
 import random
 import numpy as np
 import networkx as nx
-import time 
 
-def train_data_generator(V=1000, batch_size=128, dj=None):
-    if dj is None:
-        dj_list = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
-    else:
-        dj_list = [dj]
-        
+def train_data_generator(batch_size=64, dj=None):
     g = make_FB_graph()
-    
     while True:
-        for dj_val in dj_list:
-            assert batch_size // 2 <= dj_val * g.number_of_edges()
-            g_mod = hide_edges(g, dj_val)
+        # g = nx.barabasi_albert_graph(int(random.randint(650, 1400)), m=random.randint(1, 5))
+        dj = random.random() * 0.6
+        g_mod, hidden_edges = hide_edges(g, dj)
+        assert batch_size // 2 <= len(hidden_edges)
 
-            full_edges = set(map(tuple, map(sorted, g.edges())))
-            observed_edges = set(map(tuple, map(sorted, g_mod.edges())))
-            node_idxs = list(g_mod.nodes())
+        full_edges = set(map(tuple, map(sorted, g.edges())))
+        node_idxs = list(g_mod.nodes())
 
-            pos_edges = set()
-            while len(pos_edges) < batch_size // 2:
-                u, v = random.sample(node_idxs, 2)
-                if tuple(sorted((u, v))) in observed_edges:
-                    continue
-                if tuple(sorted((u, v))) in full_edges:
-                    pos_edges.add((u, v))
-            pos_edges = list(pos_edges)
+        pos_edges = set()
+        i = 0
+        while len(pos_edges) < batch_size // 2:
+            u, v = hidden_edges[i]
+            if g_mod.has_node(u) and g_mod.has_node(v):
+                pos_edges.add(hidden_edges[i])
+            i += 1
+        pos_edges = list(pos_edges)
 
-            neg_edges = set()
-            while len(neg_edges) < batch_size // 2:
-                u, v = random.sample(node_idxs, 2)
-                if tuple(sorted((u, v))) in full_edges:
-                    continue
-                neg_edges.add((u, v))
-            neg_edges = list(neg_edges)
+        neg_edges = set()
+        while len(neg_edges) < batch_size // 2:
+            u, v = random.sample(node_idxs, 2)
+            if tuple(sorted((u, v))) in full_edges:
+                continue
+            neg_edges.add((u, v))
+        neg_edges = list(neg_edges)
 
-            samples = [(u, v, 1) for u, v in pos_edges] + [(u, v, 0) for u, v in neg_edges]
-            random.shuffle(samples)
+        samples = [(u, v, 1) for u, v in pos_edges] + [(u, v, 0) for u, v in neg_edges]
+        random.shuffle(samples)
 
-            bc_map = nx.betweenness_centrality(g_mod)
-            pl_map = dict(nx.shortest_path_length(g_mod, weight=None))
+        # Precompute node-level / global features
+        bc_map = nx.betweenness_centrality(g_mod)
+        pl_map = dict(nx.shortest_path_length(g_mod, weight=None))
+        pr_map = nx.pagerank(g_mod)
+        cc_map = nx.clustering(g_mod)
 
-            pr_map = nx.pagerank(g_mod)
-            cc_map = nx.clustering(g_mod)
+        # num_edges = g_mod.number_of_edges()
+        mean_degree = sum(dict(g_mod.degree()).values()) / g_mod.number_of_nodes()
+        density = nx.density(g_mod)
 
-            X, y = [], []
-            for u, v, label in samples:
-                features = extract_features(g_mod, u, v, pr_map, cc_map, bc_map, pl_map)
-                X.append(features)
-                y.append(label)
+        X, y = [], []
+        for u, v, label in samples:
+            features = extract_features(
+                g_mod, u, v,
+                pr_map, cc_map, bc_map, pl_map,
+                mean_degree, density
+            )
+            X.append(features)
+            y.append(label)
 
-            yield np.array(X, dtype=np.float32), np.array(y, dtype=np.float32)
-    
+        yield np.array(X, dtype=np.float32), np.array(y, dtype=np.float32)
 
-def extract_features(g: nx.Graph, i: int, j: int, pr_map: dict, cc_map: dict, bc_map:dict, pl_map:dict):
-    neighbors_i = set(g.neighbors(i))
-    neighbors_j = set(g.neighbors(j))
-    common = neighbors_i & neighbors_j
-    union = neighbors_i | neighbors_j
 
-    deg_i = g.degree[i]
-    deg_j = g.degree[j]
-    common_neighbors = len(common)
-    jaccard = len(common) / len(union) if union else 0.0
+def extract_features(g: nx.Graph, i: int, j: int,
+                     pr_map: dict, cc_map: dict, bc_map: dict, pl_map: dict, 
+                     mean_degree: float, density: float):
+    # Local similarity scores
+    jaccard = next(nx.jaccard_coefficient(g, [(i, j)]))[2]
+    adamic_adar = next(nx.adamic_adar_index(g, [(i, j)]))[2]
+    resource_alloc = next(nx.resource_allocation_index(g, [(i, j)]))[2]
+    pref_attach = next(nx.preferential_attachment(g, [(i, j)]))[2]
 
+    # Node-level
     bc_i = bc_map.get(i, 0.0)
     bc_j = bc_map.get(j, 0.0)
-    path_length = pl_map[i].get(j, 0.0)
     pr_i = pr_map.get(i, 0.0)
     pr_j = pr_map.get(j, 0.0)
     cc_i = cc_map.get(i, 0.0)
     cc_j = cc_map.get(j, 0.0)
-    
 
-    return [deg_i, deg_j, common_neighbors, jaccard, bc_i, bc_j, path_length, pr_i, pr_j, cc_i, cc_j]
+    # Distance
+    path_length = pl_map[i].get(j, 0.0)
+
+    return [
+        jaccard, adamic_adar, resource_alloc, pref_attach,
+        bc_i, bc_j, pr_i, pr_j, cc_i, cc_j,
+        path_length, mean_degree, density
+    ]
 
 def hide_edges(g:nx.Graph, dj) -> nx.Graph:
     g_new = g.copy()
@@ -87,4 +92,4 @@ def hide_edges(g:nx.Graph, dj) -> nx.Graph:
     g_new.remove_edges_from(edges_list[:M])
     largest_cc = max(nx.connected_components(g_new), key=len)
     g_new = g_new.subgraph(largest_cc).copy()
-    return g_new
+    return g_new, edges_list

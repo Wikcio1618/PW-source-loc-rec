@@ -1,0 +1,12 @@
+N=10,modify=hide,graph=fb,dj=0.2,method=gmla,r=0.3,beta=0.95
+rank,precision
+3,0.0
+1,1.0
+1,1.0
+1,1.0
+77,0.0
+4,0.0
+9,0.0
+10,0.0
+5,0.0
+794,0.0
