@@ -67,8 +67,9 @@ def reconstruction_plots(
         precs = np.array(data["prec"])
         errs = np.array(data["prec_err"])
 
-        ax.plot(dj_vals, precs, color=colors[plot_idx], label=labels[plot_idx])
-        ax.fill_between(dj_vals, precs - errs, precs + errs, color=colors[plot_idx], alpha=0.25)
+        # ax.plot(dj_vals, precs, linestyle=None, color=colors[plot_idx], label=labels[plot_idx])
+        # ax.fill_between(dj_vals, precs - errs, precs + errs, color=colors[plot_idx], alpha=0.25)
+        ax.errorbar(dj_vals, precs, yerr=errs)
 
         plot_idx += 1
 
