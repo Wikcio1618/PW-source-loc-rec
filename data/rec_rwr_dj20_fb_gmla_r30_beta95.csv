@@ -1,0 +1,5 @@
+N=10,graph=fb,method=gmla,r=0.3,beta=0.95,modify_type=hide,dj=0.2,reconstruct_type=rwr
+k,prec,std_err
+0,0.4,0.16329931618554522
+160,0.4,0.16329931618554522
+320,0.45,0.15723301886761007
