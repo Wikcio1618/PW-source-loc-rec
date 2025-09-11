@@ -1,0 +1,3 @@
+N=1000,graph=cal,method=pearson,r=0.1,beta=0.95,modify_type=hide,dj=0.0,reconstruct_type=srw
+k,prec,prec_err,rank,rank_err,css
+0,0.9665,0.005445861493593775,1.086,0.037067208931587735,1.0
