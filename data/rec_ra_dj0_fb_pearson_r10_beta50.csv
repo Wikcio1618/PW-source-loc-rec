@@ -1,0 +1,3 @@
+N=1000,graph=fb,method=pearson,r=0.1,beta=0.5,modify_type=hide,dj=0.0,reconstruct_type=ra
+k,prec,prec_err,rank,rank_err,css
+0,0.434,0.015504334374115665,10.237,1.094595345308014,6.0

@@ -1,0 +1,3 @@
+N=1000,graph=ba,method=lptva,r=0.1,beta=0.5,modify_type=hide,dj=0.0,reconstruct_type=srw
+k,prec,prec_err,rank,rank_err,css
+0,0.165,0.011743632866916126,89.598,5.22978518192182,85.75

@@ -1,0 +1,3 @@
+N=1000,graph=email,method=pearson,r=0.1,beta=0.75,modify_type=hide,dj=0.0,reconstruct_type=srw
+k,prec,prec_err,rank,rank_err,css
+0,0.6894166666666668,0.013233398585242322,1.921,0.08587277294424078,2.0

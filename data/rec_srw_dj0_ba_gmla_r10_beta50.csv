@@ -1,0 +1,3 @@
+N=1000,graph=ba,method=gmla,r=0.1,beta=0.5,modify_type=hide,dj=0.0,reconstruct_type=srw
+k,prec,prec_err,rank,rank_err,css
+0,0.20457499999999998,0.012698889301739394,284.869,13.880838718266364,1000.0

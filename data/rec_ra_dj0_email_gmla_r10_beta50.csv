@@ -1,0 +1,3 @@
+N=1000,graph=email,method=gmla,r=0.1,beta=0.5,modify_type=hide,dj=0.0,reconstruct_type=ra
+k,prec,prec_err,rank,rank_err,css
+0,0.18883333333333335,0.011672874796124819,328.046,16.042459174963803,1133.0

@@ -1,0 +1,3 @@
+N=1000,graph=fb,method=lptva,r=0.1,beta=0.5,modify_type=hide,dj=0.0,reconstruct_type=ra
+k,prec,prec_err,rank,rank_err,css
+0,0.10333333333333333,0.009592984868747852,63.233,3.2490742057075575,74.0
